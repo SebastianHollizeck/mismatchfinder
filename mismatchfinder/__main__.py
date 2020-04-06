@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 
-from utils.Input import InputParser
-from results.Results import convertToPandasDataFrame
-from utils.Output import plotStats
-from core.BedObject import BedObject
-from core.BamScanner import BamScanner
+from .utils.Input import InputParser
+from .results.Results import convertToPandasDataFrame
+from .utils.Output import plotStats
+from .core.BedObject import BedObject
+from .core.BamScanner import BamScanner
 from multiprocessing import Semaphore, SimpleQueue
 
 # This will run everything.

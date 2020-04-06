@@ -2,7 +2,6 @@
 
 from ncls import NCLS
 from numpy import array, int64
-from utils.Output import printLog
 
 
 class BedObject(object):
@@ -25,7 +24,6 @@ class BedObject(object):
         if bedFile is None or bedFile == "":
             pass
         else:
-            printLog(f"Parsing bed file {bedFile}")
             with open(bedFile) as f:
                 for line in f:
                     # break the line into fields

@@ -1,7 +1,7 @@
 from multiprocessing import Process, Semaphore
 from logging import basicConfig, debug, DEBUG
 from numpy import array, sort, quantile
-from results.Results import Results
+from mismatchfinder.results.Results import Results
 import pysam
 import datetime
 

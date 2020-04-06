@@ -20,6 +20,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/sebastianhollizeck/mismatchfinder",
     packages=find_packages(),
+    install_requires=["numpy", "ncls", "pysam"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Development Status :: 3 - Alpha",
