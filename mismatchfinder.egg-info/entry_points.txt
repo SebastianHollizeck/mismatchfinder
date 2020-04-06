@@ -1,0 +1,3 @@
+[console_scripts]
+mismatchfinder = mismatchfinder.__main__:main
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, REMAINDER
 from os.path import isfile, isdir
 from pysam import AlignmentFile
 
@@ -69,6 +69,14 @@ class InputParser(object):
             choices=["json", "R"],
             default="json",
         )
+        parser.add_argument(
+            "-n",
+            "--normals",
+            help="the normal bams that should be used for plots",
+            nargs="+",
+            metavar="BAM",
+            default=[],
+        )
         params = parser.parse_args()
 
         ############################################################################################
@@ -95,6 +103,27 @@ class InputParser(object):
                     else:
                         self.referenceFile = None
                 self.bamFiles.append(bam)
+
+        # we do the same test for the normals
+        self.normals = []
+        for bam in params.normals:
+            # we might actually waive this exception (maybe with an option) if just one file is not
+            # found? then again we dont want to just do half an analysis.
+            if not isfile(bam):
+                raise Exception("Could not find bam file: " + bam)
+            else:
+                # this will be done multiple times, so you can combine bams and crams in the
+                # analysis without any issues
+                with AlignmentFile(bam, "r", require_index=True) as tFile:
+                    if tFile.is_cram:
+                        # we need to check for reference here, because crams need one
+                        if params.reference is None or not isfile(params.reference):
+                            raise Exception("CRAMs need a reference")
+                        else:
+                            self.referenceFile = params.reference
+                    else:
+                        self.referenceFile = None
+                self.normals.append(bam)
 
         self.blackListFile = None
         # we really only need to check if the file exists, if a file was actually given to us
@@ -149,3 +178,4 @@ class InputParser(object):
 
         # dont need to check anything here, because the parser already does everything for us
         self.verbose = params.verbose
+        self.threads = params.threads

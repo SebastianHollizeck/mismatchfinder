@@ -1,6 +1,7 @@
-from multiprocessing import Process
+from multiprocessing import Process, Semaphore
 from logging import basicConfig, debug, DEBUG
 from numpy import array, sort, quantile
+from results.Results import Results
 import pysam
 import datetime
 
@@ -13,9 +14,22 @@ class BamScanner(Process):
     """Class which scans a Bam for TMB and other interesting features"""
 
     def __init__(
-        self, bamFile, referenceFile, minMQ, minBQ, blackList=None, whiteList=None
+        self,
+        semaphore,
+        results,
+        bamFile,
+        referenceFile,
+        minMQ,
+        minBQ,
+        blackList=None,
+        whiteList=None,
+        germObj=None,
     ):
         super(BamScanner, self).__init__()
+
+        self.semaphore = semaphore
+        self.results = results
+
         self.minMQ = minMQ
         self.minBQ = minBQ
         self.bamFile = pysam.AlignmentFile(
@@ -24,6 +38,7 @@ class BamScanner(Process):
 
         self.blackList = blackList
         self.whiteList = whiteList
+        self.germObj = germObj
 
         basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
 
@@ -136,7 +151,9 @@ class BamScanner(Process):
 
         # we are done so we update the status as well
 
-        debug("Read through 100.00% of reads ")
+        debug(
+            f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
+        )
 
         # did we have an issue with reads?
         if len(fragLengths) == 0:
@@ -200,7 +217,35 @@ class BamScanner(Process):
         }
 
     def run(self):
-        self.getMutationSites()
+        # block the resources for this process
+        self.semaphore.acquire()
+
+        # execute
+        # first get all possible sites
+        mutCands = self.getMutationSites()
+
+        # then analyse the contexts as well as germline status
+        (contexts, nSomMisMatches, nSomSites, nSomSitesConfident) = countContexts(
+            mutCands["sites"], self.germObj
+        )
+        # create a results object
+        result = Results(
+            sample="test",
+            nMisMatches=mutCands["nMisMatches"],
+            nSites=mutCands["nSites"],
+            nReads=mutCands["nReads"],
+            nAlignedReads=mutCands["nAlignedReads"],
+            nAlignedBases=mutCands["nAlignedBases"],
+            nSomMisMatches=nSomMisMatches,
+            nSomSites=nSomSites,
+            nSomConfidentSites=nSomSitesConfident,
+            nDiscordantReads=mutCands["nDiscordantReads"],
+        )
+        # add it to the shared output queue
+        self.results.put(result)
+
+        # release the block for resources again
+        self.semaphore.release()
 
 
 # this is a simple check if a MDstring contains any mismatches
@@ -327,3 +372,170 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
 # this function counts how many lower case chars are in a string
 def countLowerCase(string):
     return sum(1 for c in string if c.islower())
+
+
+# this function aggregates the found mismatches and their contexts into counts
+# please use a SORTED list of mismatches, to avoid unnecessary caching when using germline check
+# without the check it doesnt really matter
+def countContexts(candMismatches, germObj=None):
+
+    # just tell me what you are doing
+    debug("Counting context occurrences in all mismatches")
+    # get the time we started with this
+    startTime = datetime.datetime.now()
+
+    # this is for the debug output only
+    diNucChanges = []
+
+    # this is where we store our final output
+    contexts = {}
+
+    # somaticStats
+    if not germObj is None:
+        nSomMisMatches = 0
+        nSomSites = 0
+        nSomSitesConfident = 0
+    else:
+        # set to -1 if we do not have a germline
+        nSomMisMatches = -1
+        nSomSites = -1
+        nSomSitesConfident = -1
+
+    # for verbose output
+    nCands = 0
+    totalCand = len(candMismatches)
+
+    # for germline checks
+    currChr = None
+    currChrSites = None
+    currChrAlts = None
+    currChrRefs = None
+
+    # if we could ensure python3.7 we could ignore the sorted, because they get output the same way they get input
+    for (chr, pos, refContext, altContext) in sorted(candMismatches):
+
+        nCands += 1
+        multiplicity = candMismatches[(chr, pos, refContext, altContext)]
+
+        # every 100 mismatches we tell people how far we are
+        if nCands % 1000000 == 0:
+            # time so far
+            currTime = datetime.datetime.now()
+            deltaTime = currTime - startTime
+            candsPerSec = nCands / deltaTime.total_seconds()
+            # we really just care about the aproximate speed
+            candsPerSec = int(round(candsPerSec, -2))
+
+            debug(
+                f"Checked {(nCands/totalCand):3.2%} of mismatches  {candsPerSec:6d}/s           "
+            )
+
+        # adjust the context if it is already present in gnomad
+        # eg if we start with ccT > TTT and the first c is already in gnomad we convert it to a
+        # capital letter so it would become CcT > TTT, that way the variant is kept, but it also
+        # is clear its not a real somatic variant.
+        # This can also create ref contexts without any somatic variants, which we discard so they
+        # dont mess up statistics
+        if not germObj is None:
+            try:
+                # we only update the variants if we need to
+                if chr != currChr:
+                    debug(f"Loading cache for chromosome {chr}                       ")
+
+                    # printLog("Caching variant sites")
+
+                    # build the NCLS index instead of what allel does, because the caching is
+                    # slower but the query is SO much faster
+                    currChrSites = buildNCLSindex(germObj[f"{chr}/variants/POS"][...])
+
+                    # printLog("Caching variants")
+                    # this loads the zarr object into memory, which is possible because we only load
+                    # a small part of the whole thing
+                    currChrAlts = germObj[f"{chr}/variants/ALT"][...]
+                    currChrRefs = germObj[f"{chr}/variants/REF"][...]
+
+                    # need to do this last so to give zarr a chance to fail
+                    currChr = chr
+
+                # because pysam gives 0 based indexes, we want pos:pos+1 to get all variants in the
+                # first two positions of the trinucleotide context, which is enough, as we left
+                # shifted variants and didnt allow a variant in the third position
+                # getting the index which corresponds to the chromosomal position
+                varIdxs = currChrSites.find_overlap(pos, pos + 2)
+
+                # we do not really need the start and stop here, we could just use the idx, but
+                # NCLS gives the full info anyways
+                for (start, stop, idx) in varIdxs:
+                    # this is the position in the contexts we are talking about (again pysam is 0
+                    # based which makes this part a tad easier)
+                    offset = start - pos
+
+                    # we can ignore this position if it is upper case in the ref, because that would
+                    # mean we didnt find a variant there
+                    if refContext[offset].isupper():
+                        continue
+
+                    # if the ref doesnt have length 1 we are dealing with an indel, and we dont care
+                    ref = currChrRefs[idx]
+                    if len(ref) != 1:
+                        continue
+                    # we can have several alts, so we check all of them
+                    for alt in currChrAlts[idx]:
+                        # again if this is not of length 1 we have an indel and we do not really
+                        # want to deal with it
+                        if len(alt) != 1:
+                            continue
+                        # now here we need to check if the alt matches the alt that we found in the
+                        # reads
+                        if altContext[offset].upper() == alt:
+                            # this means this is a germline variant and we just make it an upper case
+                            # print(
+                            #     f"Found a germline variant {currChr}:{start}{ref}>{alt} refcontext: {refContext} altContext: {altContext}"
+                            # )
+                            refContext = (
+                                f"{refContext[:offset]}{ref}{refContext[offset+1:]}"
+                            )
+                            # print(f"changed refcontext to {refContext}")
+                            # we can also stop iterating through the alts, because this will only
+                            # work once
+                            break
+
+                # with us changing around things for germline variants, we need to discard the
+                # cases, that now dont have variants anymore (at least no somatic ones)
+                if countLowerCase(refContext) == 0:
+                    continue
+                else:
+                    # well this means we have a somatic so we add those things together
+                    nSomMisMatches += multiplicity
+                    nSomSites += 1
+                    if multiplicity > 1:
+                        nSomSitesConfident += 1
+
+            except KeyError:
+                # this is when there are no germline variants reported for this site
+                # print(f"no germline variant found for {chr}:{pos}-{pos+1}")
+                pass
+
+        # create the key and adjust the counts for this context byt the amount of time this mismatch
+        # was seen in the reads
+        key = f"{refContext}>{altContext}"
+        if key not in contexts:
+            contexts[key] = multiplicity
+        else:
+            contexts[key] += multiplicity
+
+        # this is a crutch to see the reported CC>TT variants
+        # if refContext.startswith("cc") and altContext.startswith("TT"):
+        #     diNucChanges.append((chr, pos, refContext, altContext))
+
+    # need to have a newline for that as well
+    debug("Checked 100.00% of mismatches               ")
+
+    # this is a temporary write to a file which is meant to see if the samples have overlapping
+    # mutations
+    # with open(f"{os.path.basename(bamfile)}_dinucsites.tsv", "w") as tmpF:
+    #     for (chr, pos, ref, alt) in sorted(diNucChanges):
+    #         tmpF.write(f"{chr}\t{pos}\t{ref}\t{alt}\n")
+
+    # TODO: make this a dict as well?
+    return (contexts, nSomMisMatches, nSomSites, nSomSitesConfident)
