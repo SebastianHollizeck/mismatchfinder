@@ -32,9 +32,9 @@ class BamScanner(Process):
 
         self.minMQ = minMQ
         self.minBQ = minBQ
-        self.bamFile = pysam.AlignmentFile(
-            bamFile, "r", require_index=True, reference_filename=referenceFile
-        )
+
+        self.bamFile = bamFile
+        self.referenceFile = referenceFile
 
         self.blackList = blackList
         self.whiteList = whiteList
@@ -219,6 +219,11 @@ class BamScanner(Process):
     def run(self):
         # block the resources for this process
         self.semaphore.acquire()
+
+        # initiate bam object
+        self.bamFile = pysam.AlignmentFile(
+            self.bamFile, "r", require_index=True, reference_filename=self.referenceFile
+        )
 
         # execute
         # first get all possible sites
