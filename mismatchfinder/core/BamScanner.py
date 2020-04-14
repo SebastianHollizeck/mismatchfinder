@@ -537,10 +537,6 @@ def countContexts(candMismatches, germObj=None):
         else:
             contexts[key] += multiplicity
 
-        # this is a crutch to see the reported CC>TT variants
-        # if refContext.startswith("cc") and altContext.startswith("TT"):
-        #     diNucChanges.append((chr, pos, refContext, altContext))
-
     # need to have a newline for that as well
     debug("Checked 100.00% of mismatches               ")
     debug(f"{nShiftFailed} contexts didnt have a center snp anymore")
