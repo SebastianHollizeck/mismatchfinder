@@ -16,10 +16,10 @@ def main():
     inputs = InputParser()
 
     # generate the blacklist
-    blackList = BedObject(inputs.blackListFile)
+    blackList = BedObject.parseFile(inputs.blackListFile)
 
     # generate white list
-    whiteList = BedObject(inputs.whiteListFile)
+    whiteList = BedObject.parseFile(inputs.whiteListFile)
 
     # create a block to analyse only the specified amount of processes in parallel
     semaphore = Semaphore(inputs.threads)
@@ -70,10 +70,10 @@ def main():
         p.join()
 
     # output results as just the data or even with plot
-    plotStats(
-        convertToPandasDataFrame(tumourResults),
-        normalDf=convertToPandasDataFrame(normalResults),
-    )
+    # plotStats(
+    #     convertToPandasDataFrame(tumourResults),
+    #     normalDf=convertToPandasDataFrame(normalResults),
+    # )
 
 
 if __name__ == "__main__":

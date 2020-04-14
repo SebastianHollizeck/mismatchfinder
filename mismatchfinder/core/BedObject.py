@@ -20,41 +20,45 @@ class BedObject(object):
         currChr = None
         self.__ncls = {}
 
-        # if the file path is empty or None, we just return an empty object, which makes sense
-        if bedFile is None or bedFile == "":
-            pass
+        with open(bedFile) as f:
+            for line in f:
+                # break the line into fields
+                lineArray = line.strip().split()
+                # if the chromosome is still the same, or we do this the first time, we append
+                if currChr == lineArray[0] or currChr is None:
+                    # this is not changing anything but for the first time (when currChr is None), but
+                    # thats fine as this is neither time consuming, nor the bottle neck, its just not
+                    # pretty
+                    currChr = lineArray[0]
+
+                    # add the starts and stops to the list
+                    starts.append(int(lineArray[1]))
+                    ends.append(int(lineArray[2]))
+
+                else:
+                    # convert to array with dtype (ncls needs that)
+                    starts = array(starts, dtype=int64)
+                    ends = array(ends, dtype=int64)
+
+                    # create the data structure (third column is ids... which could be anything, but
+                    # needs to be a number )
+                    tmpNcls = NCLS(starts, ends, starts)
+                    # store the data structure under its chromosome name
+                    self.__ncls[currChr] = tmpNcls
+
+                    # reset all the things for the next chromosome (and initialise it while we are
+                    # already at it)
+                    currChr = lineArray[0]
+                    starts = [lineArray[1]]
+                    ends = [lineArray[2]]
+
+    @classmethod
+    def parseFile(cls, file):
+        """Takes care of returning None if the file is empty or a proper bed object if thefile is a bed file"""
+        if file == "" or file is None:
+            return None
         else:
-            with open(bedFile) as f:
-                for line in f:
-                    # break the line into fields
-                    lineArray = line.strip().split()
-                    # if the chromosome is still the same, or we do this the first time, we append
-                    if currChr == lineArray[0] or currChr is None:
-                        # this is not changing anything but for the first time (when currChr is None), but
-                        # thats fine as this is neither time consuming, nor the bottle neck, its just not
-                        # pretty
-                        currChr = lineArray[0]
-
-                        # add the starts and stops to the list
-                        starts.append(int(lineArray[1]))
-                        ends.append(int(lineArray[2]))
-
-                    else:
-                        # convert to array with dtype (ncls needs that)
-                        starts = array(starts, dtype=int64)
-                        ends = array(ends, dtype=int64)
-
-                        # create the data structure (third column is ids... which could be anything, but
-                        # needs to be a number )
-                        tmpNcls = NCLS(starts, ends, starts)
-                        # store the data structure under its chromosome name
-                        self.__ncls[currChr] = tmpNcls
-
-                        # reset all the things for the next chromosome (and initialise it while we are
-                        # already at it)
-                        currChr = lineArray[0]
-                        starts = [lineArray[1]]
-                        ends = [lineArray[2]]
+            return BedObject(file)
 
     # check if the read is aligned to any blacklisted area (again NCLS does the heavy lifting)
     def isWithinRegion(self, read):

@@ -119,7 +119,8 @@ class BamScanner(Process):
                     nNoMisMReads += 1
                 else:
 
-                    # if the read is aligned to any low complexity area, we just cant deal with it
+                    # if we did get a blacklist and the read actually is within that region, we
+                    # discard it and keep a count on how many we discarded
                     if not self.blackList is None and self.blackList.isWithinRegion(
                         read
                     ):
@@ -158,9 +159,9 @@ class BamScanner(Process):
         # did we have an issue with reads?
         if len(fragLengths) == 0:
             debug(
-                f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible"
+                f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMReads: {nNoMisMReads}\nBlacklistedReads: {nBlackListed}\nNonWhiteListed: {nNonWhiteListed}"
             )
-            exit(1)
+            raise Exception("No reads left")
 
         # we use fragLengths here, because it already contains all aligned reads
         nAlignedReads = len(fragLengths)
@@ -409,6 +410,7 @@ def countContexts(candMismatches, germObj=None):
     # for verbose output
     nCands = 0
     totalCand = len(candMismatches)
+    nShiftFailed = 0
 
     # for germline checks
     currChr = None
@@ -493,23 +495,29 @@ def countContexts(candMismatches, germObj=None):
                         # now here we need to check if the alt matches the alt that we found in the
                         # reads
                         if altContext[offset].upper() == alt:
-                            # this means this is a germline variant and we just make it an upper case
-                            # print(
-                            #     f"Found a germline variant {currChr}:{start}{ref}>{alt} refcontext: {refContext} altContext: {altContext}"
-                            # )
+                            # this means this is a germline variant and we just make it an upper
+                            # case
                             refContext = (
                                 f"{refContext[:offset]}{ref}{refContext[offset+1:]}"
                             )
-                            # print(f"changed refcontext to {refContext}")
                             # we can also stop iterating through the alts, because this will only
                             # work once
                             break
+                    # however we cannot skip working through this loop, as there might be another
+                    #  germline variant in the context
 
                 # with us changing around things for germline variants, we need to discard the
                 # cases, that now dont have variants anymore (at least no somatic ones)
+
+                # this isnt as simple for a concept, because for the real signatures, only one
+                # variant is allowed in the context which is the middle.
+                # therefore we would need to reshift the middle if that happend
                 if countLowerCase(refContext) == 0:
                     continue
                 else:
+                    if refContext[1].upper():
+                        nShiftFailed += 1
+
                     # well this means we have a somatic so we add those things together
                     nSomMisMatches += multiplicity
                     nSomSites += 1
@@ -535,6 +543,7 @@ def countContexts(candMismatches, germObj=None):
 
     # need to have a newline for that as well
     debug("Checked 100.00% of mismatches               ")
+    debug(f"{nShiftFailed} contexts didnt have a center snp anymore")
 
     # this is a temporary write to a file which is meant to see if the samples have overlapping
     # mutations
