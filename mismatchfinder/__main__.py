@@ -74,6 +74,7 @@ def main():
     #     convertToPandasDataFrame(tumourResults),
     #     normalDf=convertToPandasDataFrame(normalResults),
     # )
+    print(tumourResults[0])
 
 
 if __name__ == "__main__":
