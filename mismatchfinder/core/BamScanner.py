@@ -1,5 +1,5 @@
 from multiprocessing import Process, Semaphore
-from logging import basicConfig, debug, DEBUG
+from logging import debug, info
 from numpy import array, sort, quantile
 from mismatchfinder.results.Results import Results
 from mismatchfinder.utils.Misc import countLowerCase
@@ -397,9 +397,10 @@ def countContexts(candMisMatches, germObj=None):
         nSomMisMatches = 0
         nSomSites = 0
         nSomSitesConfident = 0
+
         checked = germObj.checkGermlineStatus(candMisMatches)
-        debug(
-            f"{len(candMisMatches)} Mismatches were check for germline status and {len(checked)} were find to be somatic"
+        info(
+            f"{len(candMisMatches)} Mismatches were check for germline status and {len(checked)} were found to be somatic"
         )
         candMisMatches = checked
     else:

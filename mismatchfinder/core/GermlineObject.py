@@ -83,7 +83,7 @@ class GermlineObject(object):
 
             # first we need to cache the data from the chromosome that the site is on
             if cache is None or cache.chr != chr:
-                cache = CacheObject(self.zarrObj, chr)
+                cache = ChromosomeCache(self, chr)
                 # if there is no cache for this chromosome we just get none back
                 if cache is None:
                     # in this case we cannot check the germline status and just assume everything is
@@ -134,19 +134,19 @@ class GermlineObject(object):
             if countLowerCase(refContext) == 0:
                 continue
             else:
-                if altContext[1].upper():
+                if refContext[1].isupper():
                     nShiftFail += 1
             res[(chr, pos, refContext, altContext)] = occurrences
 
-        debug(f"{nShiftFail} trinucs without a center variant")
+        info(f"Found {nShiftFail} trinucleotides without a center variant")
         return res
 
 
-class CacheObject(object):
+class ChromosomeCache(object):
     """Very simple object that just stores the cached information from the zarr object"""
 
     def __init__(self, germlineObj, chr):
-        super(CacheObject, self).__init__()
+        super(ChromosomeCache, self).__init__()
         debug(f"creating cache for chr {chr}")
         try:
             debug("positional index")
@@ -162,7 +162,9 @@ class CacheObject(object):
             self.chr = None
         except Exception as e:
             eStr = getattr(e, "message", repr(e))
-            info(f"Unknown exception {eStr} when trying to cache from zarr storage")
+            info(
+                f"Unknown exception {eStr} '{str(e)}' when trying to cache from zarr storage"
+            )
             exit(1)
 
     def findOverlaps(self, pos, loff=0, roff=2):
