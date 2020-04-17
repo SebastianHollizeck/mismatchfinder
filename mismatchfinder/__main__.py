@@ -5,13 +5,16 @@ from .utils.Input import InputParser
 from .results.Results import convertToPandasDataFrame
 from .utils.Output import plotStats
 from .core.BedObject import BedObject
+from .core.GermlineObject import GermlineObject
 from .core.BamScanner import BamScanner
 from multiprocessing import Semaphore, SimpleQueue
+from logging import basicConfig, debug, DEBUG
 
 # This will run everything.
 
 
 def main():
+    basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
     # start with parameter Parsing
     inputs = InputParser()
 
@@ -20,6 +23,9 @@ def main():
 
     # generate white list
     whiteList = BedObject.parseFile(inputs.whiteListFile)
+
+    # generate germline object
+    germline = GermlineObject.parseZarrRoot(inputs.germlineFile)
 
     # create a block to analyse only the specified amount of processes in parallel
     semaphore = Semaphore(inputs.threads)
@@ -42,6 +48,7 @@ def main():
             whiteList=whiteList,
             semaphore=semaphore,
             results=tumourResults,
+            germObj=germline,
         )
         # this shedules the running, but will be blocked by the semaphore inside the actual process
         # to not overload the system
@@ -59,6 +66,7 @@ def main():
             whiteList=whiteList,
             semaphore=semaphore,
             results=normalResults,
+            germObj=germline,
         )
         # this shedules the running, but will be blocked by the semaphore inside the actual process
         # to not overload the system
@@ -74,7 +82,7 @@ def main():
     #     convertToPandasDataFrame(tumourResults),
     #     normalDf=convertToPandasDataFrame(normalResults),
     # )
-    print(tumourResults.get())
+    # print(tumourResults.get())
 
 
 if __name__ == "__main__":

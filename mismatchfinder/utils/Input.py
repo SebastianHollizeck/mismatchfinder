@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from argparse import ArgumentParser, REMAINDER
-from os.path import isfile, isdir
+from os.path import isfile, isdir, abspath
 from pysam import AlignmentFile
 
 
@@ -102,7 +102,7 @@ class InputParser(object):
                             self.referenceFile = params.reference
                     else:
                         self.referenceFile = None
-                self.bamFiles.append(bam)
+                self.bamFiles.append(abspath(bam))
 
         # we do the same test for the normals
         self.normals = []
@@ -123,7 +123,7 @@ class InputParser(object):
                             self.referenceFile = params.reference
                     else:
                         self.referenceFile = None
-                self.normals.append(bam)
+                self.normals.append(abspath(bam))
 
         self.blackListFile = None
         # we really only need to check if the file exists, if a file was actually given to us
@@ -133,7 +133,7 @@ class InputParser(object):
                     "Could not find black list bed file: " + params.blackList
                 )
             else:
-                self.blackListFile = params.blackList
+                self.blackListFile = abspath(params.blackList)
 
         self.whiteListFile = None
         if not params.whiteList is None:
@@ -142,7 +142,7 @@ class InputParser(object):
                     "Could not find whitelist bed file: " + params.whiteList
                 )
             else:
-                self.whiteListFile = params.whiteList
+                self.whiteListFile = abspath(params.whiteList)
 
         self.germlineFile = ""
         # we really only need to check if the file exists, if a file was actually given to us
@@ -152,7 +152,7 @@ class InputParser(object):
                     "Could not find germline zarr folder: " + params.germline
                 )
             else:
-                self.germlineFile = params.germline
+                self.germlineFile = abspath(params.germline)
 
         # some info if weird values get specified
         if params.baseQuality < 0:

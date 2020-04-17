@@ -2,6 +2,7 @@ from multiprocessing import Process, Semaphore
 from logging import basicConfig, debug, DEBUG
 from numpy import array, sort, quantile
 from mismatchfinder.results.Results import Results
+from mismatchfinder.utils.Misc import countLowerCase
 import pysam
 import datetime
 
@@ -40,7 +41,7 @@ class BamScanner(Process):
         self.whiteList = whiteList
         self.germObj = germObj
 
-        basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
+        # basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
 
     # this function gets all sites of mismatches from any mapped read in a bam
     # use qualThreshold, bedObj and minMQ to exclude reads and mismatches
@@ -232,7 +233,7 @@ class BamScanner(Process):
 
         # then analyse the contexts as well as germline status
         (contexts, nSomMisMatches, nSomSites, nSomSitesConfident) = countContexts(
-            mutCands["sites"], self.germObj
+            mutCands["sites"], germObj=self.germObj
         )
         # create a results object
         result = Results(
@@ -375,15 +376,10 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
     return mutations
 
 
-# this function counts how many lower case chars are in a string
-def countLowerCase(string):
-    return sum(1 for c in string if c.islower())
-
-
 # this function aggregates the found mismatches and their contexts into counts
 # please use a SORTED list of mismatches, to avoid unnecessary caching when using germline check
 # without the check it doesnt really matter
-def countContexts(candMismatches, germObj=None):
+def countContexts(candMisMatches, germObj=None):
 
     # just tell me what you are doing
     debug("Counting context occurrences in all mismatches")
@@ -401,15 +397,20 @@ def countContexts(candMismatches, germObj=None):
         nSomMisMatches = 0
         nSomSites = 0
         nSomSitesConfident = 0
+        checked = germObj.checkGermlineStatus(candMisMatches)
+        debug(
+            f"{len(candMisMatches)} Mismatches were check for germline status and {len(checked)} were find to be somatic"
+        )
+        candMisMatches = checked
     else:
         # set to -1 if we do not have a germline
-        nSomMisMatches = -1
-        nSomSites = -1
-        nSomSitesConfident = -1
+        nSomMisMatches = None
+        nSomSites = None
+        nSomSitesConfident = None
 
     # for verbose output
     nCands = 0
-    totalCand = len(candMismatches)
+    totalCand = len(candMisMatches)
     nShiftFailed = 0
 
     # for germline checks
@@ -418,128 +419,16 @@ def countContexts(candMismatches, germObj=None):
     currChrAlts = None
     currChrRefs = None
 
-    # if we could ensure python3.7 we could ignore the sorted, because they get output the same way they get input
-    for (chr, pos, refContext, altContext) in sorted(candMismatches):
-
-        nCands += 1
-        multiplicity = candMismatches[(chr, pos, refContext, altContext)]
-
-        # every 100 mismatches we tell people how far we are
-        if nCands % 1000000 == 0:
-            # time so far
-            currTime = datetime.datetime.now()
-            deltaTime = currTime - startTime
-            candsPerSec = nCands / deltaTime.total_seconds()
-            # we really just care about the aproximate speed
-            candsPerSec = int(round(candsPerSec, -2))
-
-            debug(
-                f"Checked {(nCands/totalCand):3.2%} of mismatches  {candsPerSec:6d}/s           "
-            )
-
-        # adjust the context if it is already present in gnomad
-        # eg if we start with ccT > TTT and the first c is already in gnomad we convert it to a
-        # capital letter so it would become CcT > TTT, that way the variant is kept, but it also
-        # is clear its not a real somatic variant.
-        # This can also create ref contexts without any somatic variants, which we discard so they
-        # dont mess up statistics
-        if not germObj is None:
-            try:
-                # we only update the variants if we need to
-                if chr != currChr:
-                    debug(f"Loading cache for chromosome {chr}                       ")
-
-                    # printLog("Caching variant sites")
-
-                    # build the NCLS index instead of what allel does, because the caching is
-                    # slower but the query is SO much faster
-                    currChrSites = buildNCLSindex(germObj[f"{chr}/variants/POS"][...])
-
-                    # printLog("Caching variants")
-                    # this loads the zarr object into memory, which is possible because we only load
-                    # a small part of the whole thing
-                    currChrAlts = germObj[f"{chr}/variants/ALT"][...]
-                    currChrRefs = germObj[f"{chr}/variants/REF"][...]
-
-                    # need to do this last so to give zarr a chance to fail
-                    currChr = chr
-
-                # because pysam gives 0 based indexes, we want pos:pos+1 to get all variants in the
-                # first two positions of the trinucleotide context, which is enough, as we left
-                # shifted variants and didnt allow a variant in the third position
-                # getting the index which corresponds to the chromosomal position
-                varIdxs = currChrSites.find_overlap(pos, pos + 2)
-
-                # we do not really need the start and stop here, we could just use the idx, but
-                # NCLS gives the full info anyways
-                for (start, stop, idx) in varIdxs:
-                    # this is the position in the contexts we are talking about (again pysam is 0
-                    # based which makes this part a tad easier)
-                    offset = start - pos
-
-                    # we can ignore this position if it is upper case in the ref, because that would
-                    # mean we didnt find a variant there
-                    if refContext[offset].isupper():
-                        continue
-
-                    # if the ref doesnt have length 1 we are dealing with an indel, and we dont care
-                    ref = currChrRefs[idx]
-                    if len(ref) != 1:
-                        continue
-                    # we can have several alts, so we check all of them
-                    for alt in currChrAlts[idx]:
-                        # again if this is not of length 1 we have an indel and we do not really
-                        # want to deal with it
-                        if len(alt) != 1:
-                            continue
-                        # now here we need to check if the alt matches the alt that we found in the
-                        # reads
-                        if altContext[offset].upper() == alt:
-                            # this means this is a germline variant and we just make it an upper
-                            # case
-                            refContext = (
-                                f"{refContext[:offset]}{ref}{refContext[offset+1:]}"
-                            )
-                            # we can also stop iterating through the alts, because this will only
-                            # work once
-                            break
-                    # however we cannot skip working through this loop, as there might be another
-                    #  germline variant in the context
-
-                # with us changing around things for germline variants, we need to discard the
-                # cases, that now dont have variants anymore (at least no somatic ones)
-
-                # this isnt as simple for a concept, because for the real signatures, only one
-                # variant is allowed in the context which is the middle.
-                # therefore we would need to reshift the middle if that happend
-                if countLowerCase(refContext) == 0:
-                    continue
-                else:
-                    if refContext[1].upper():
-                        nShiftFailed += 1
-
-                    # well this means we have a somatic so we add those things together
-                    nSomMisMatches += multiplicity
-                    nSomSites += 1
-                    if multiplicity > 1:
-                        nSomSitesConfident += 1
-
-            except KeyError:
-                # this is when there are no germline variants reported for this site
-                # print(f"no germline variant found for {chr}:{pos}-{pos+1}")
-                pass
-
-        # create the key and adjust the counts for this context byt the amount of time this mismatch
-        # was seen in the reads
-        key = f"{refContext}>{altContext}"
-        if key not in contexts:
-            contexts[key] = multiplicity
-        else:
-            contexts[key] += multiplicity
+    # # create the key and adjust the counts for this context byt the amount of time this mismatch
+    # # was seen in the reads
+    # key = f"{refContext}>{altContext}"
+    # if key not in contexts:
+    #     contexts[key] = multiplicity
+    # else:
+    #     contexts[key] += multiplicity
 
     # need to have a newline for that as well
     debug("Checked 100.00% of mismatches               ")
-    debug(f"{nShiftFailed} contexts didnt have a center snp anymore")
 
     # this is a temporary write to a file which is meant to see if the samples have overlapping
     # mutations
