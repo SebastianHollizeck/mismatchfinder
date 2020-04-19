@@ -2,7 +2,7 @@ from zarr import open_group
 from ncls import NCLS
 from numpy import array, int64, arange
 from mismatchfinder.utils.Misc import countLowerCase, buildNCLSindex
-from logging import debug, info
+from logging import debug, info, error
 from sys import exit
 
 
@@ -149,11 +149,8 @@ class ChromosomeCache(object):
         super(ChromosomeCache, self).__init__()
         debug(f"creating cache for chr {chr}")
         try:
-            debug("positional index")
             self.index = germlineObj.loadChromosomeIndex(chr)
-            debug("reference nucleotides")
             self.refs = germlineObj.loadChromsomeRefs(chr)
-            debug("alternative nucleotides")
             self.alts = germlineObj.loadChromsomeAlts(chr)
             self.chr = chr
         except KeyError:
@@ -162,7 +159,7 @@ class ChromosomeCache(object):
             self.chr = None
         except Exception as e:
             eStr = getattr(e, "message", repr(e))
-            info(
+            error(
                 f"Unknown exception {eStr} '{str(e)}' when trying to cache from zarr storage"
             )
             exit(1)
@@ -174,11 +171,12 @@ class ChromosomeCache(object):
         # getting the index which corresponds to the chromosomal position
         try:
             res = self.index.find_overlap(pos + loff, pos + roff)
-        except KeyError:
+
+        except AttributeError:
             # this is when there are no germline variants reported for this site
             res = []
-        except:
-            raise Exception(
-                f"Unknown exception {e} when trying to find overlaps with the cache"
-            )
+        except Exception as e:
+            eStr = getattr(e, "message", repr(e))
+            error(f"Unknown exception {eStr} '{str(e)}' when querying cache")
+            exit(1)
         return res
