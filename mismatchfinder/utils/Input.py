@@ -3,7 +3,7 @@
 from argparse import ArgumentParser, REMAINDER
 from os.path import isfile, isdir, abspath
 from pysam import AlignmentFile
-from logging import debug, info, error
+from logging import debug, info, error, basicConfig
 
 
 class InputParser(object):
@@ -56,20 +56,21 @@ class InputParser(object):
         )
 
         parser.add_argument(
-            "-v",
-            "--verbose",
-            help="flag to enable verbose status output (this will use carriage return to write to the same line again, so dont use it in redirects)",
-            action="count",
-            default=0,
-        )
-
-        parser.add_argument(
             "-O",
             "--outputType",
             help="the format to output the result",
             choices=["json", "R"],
             default="json",
         )
+
+        parser.add_argument(
+            "-v",
+            "--verbosity",
+            help="Level of messages to be displayed",
+            choices=["debug", "info", "error"],
+            default="info",
+        )
+
         parser.add_argument(
             "-n",
             "--normals",
@@ -78,7 +79,13 @@ class InputParser(object):
             metavar="BAM",
             default=[],
         )
-        params = parser.parse_args()
+        params = parser.parse_args
+
+        # set up the logging before we do anything else
+        # now we tell people how much they want to know
+        basicConfig(
+            level=params.verbosity.upper(), format="%(processName)-10s  %(message)s"
+        )
 
         ############################################################################################
         ###                                    sanity check                                      ###
@@ -175,5 +182,5 @@ class InputParser(object):
         self.minMQ = params.mappingQuality
 
         # dont need to check anything here, because the parser already does everything for us
-        self.verbose = params.verbose
+        self.verbosity = params.verbosity.upper()
         self.threads = params.threads

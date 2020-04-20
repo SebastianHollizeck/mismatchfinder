@@ -8,17 +8,18 @@ from .core.BedObject import BedObject
 from .core.GermlineObject import GermlineObject
 from .core.BamScanner import BamScanner
 from multiprocessing import Semaphore, SimpleQueue
-from logging import basicConfig, debug, DEBUG, INFO, ERROR
+from logging import debug
 
 # This will run everything.
 
 
 def main():
-    basicConfig(level=INFO, format="%(processName)-10s  %(message)s")
+
     # start with parameter Parsing
     inputs = InputParser()
 
     # generate the blacklist
+    debug("Parsing blacklist file")
     blackList = BedObject.parseFile(inputs.blackListFile)
 
     # generate white list
