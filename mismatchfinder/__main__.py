@@ -8,7 +8,7 @@ from .core.BedObject import BedObject
 from .core.GermlineObject import GermlineObject
 from .core.BamScanner import BamScanner
 from multiprocessing import Semaphore, SimpleQueue
-from logging import basicConfig, debug, DEBUG
+from logging import basicConfig, debug, DEBUG, INFO, ERROR
 
 # This will run everything.
 
