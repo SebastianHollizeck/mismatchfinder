@@ -3,6 +3,7 @@
 from argparse import ArgumentParser, REMAINDER
 from os.path import isfile, isdir, abspath
 from pysam import AlignmentFile
+from logging import debug, info, error
 
 
 class InputParser(object):
@@ -83,9 +84,16 @@ class InputParser(object):
         ###                                    sanity check                                      ###
         ############################################################################################
 
+        # find out if we have a reference
+        if params.reference is None or not isfile(params.reference):
+            self.referenceFile = None
+        else:
+            self.referenceFile = params.reference
+
         # we better check if the bam files actually exist
         self.bamFiles = []
         for bam in params.bams:
+            debug(f"Checking alignment input file: {bam}")
             # we might actually waive this exception (maybe with an option) if just one file is not
             # found? then again we dont want to just do half an analysis.
             if not isfile(bam):
@@ -94,19 +102,14 @@ class InputParser(object):
                 # this will be done multiple times, so you can combine bams and crams in the
                 # analysis without any issues
                 with AlignmentFile(bam, "r", require_index=True) as tFile:
-                    if tFile.is_cram:
-                        # we need to check for reference here, because crams need one
-                        if params.reference is None or not isfile(params.reference):
-                            raise Exception("CRAMs need a reference")
-                        else:
-                            self.referenceFile = params.reference
-                    else:
-                        self.referenceFile = None
+                    if tFile.is_cram and self.referenceFile is None:
+                        raise Exception("CRAMs need a reference")
                 self.bamFiles.append(abspath(bam))
 
         # we do the same test for the normals
         self.normals = []
         for bam in params.normals:
+            debug(f"Checking alignment input file: {bam}")
             # we might actually waive this exception (maybe with an option) if just one file is not
             # found? then again we dont want to just do half an analysis.
             if not isfile(bam):
@@ -115,19 +118,14 @@ class InputParser(object):
                 # this will be done multiple times, so you can combine bams and crams in the
                 # analysis without any issues
                 with AlignmentFile(bam, "r", require_index=True) as tFile:
-                    if tFile.is_cram:
-                        # we need to check for reference here, because crams need one
-                        if params.reference is None or not isfile(params.reference):
-                            raise Exception("CRAMs need a reference")
-                        else:
-                            self.referenceFile = params.reference
-                    else:
-                        self.referenceFile = None
+                    if tFile.is_cram and self.referenceFile is None:
+                        raise Exception("CRAMs need a reference")
                 self.normals.append(abspath(bam))
 
         self.blackListFile = None
         # we really only need to check if the file exists, if a file was actually given to us
         if not params.blackList is None:
+            debug(f"Checking blacklist input file: {params.blacklist}")
             if not isfile(params.blackList):
                 raise Exception(
                     "Could not find black list bed file: " + params.blackList
@@ -137,6 +135,7 @@ class InputParser(object):
 
         self.whiteListFile = None
         if not params.whiteList is None:
+            debug(f"Checking whitelist input file: {params.whitelist}")
             if not isfile(params.whiteList):
                 raise Exception(
                     "Could not find whitelist bed file: " + params.whiteList
@@ -147,6 +146,7 @@ class InputParser(object):
         self.germlineFile = ""
         # we really only need to check if the file exists, if a file was actually given to us
         if not params.germline is None:
+            debug(f"Checking germline input file: {params.germline}")
             if not isdir(params.germline):
                 raise Exception(
                     "Could not find germline zarr folder: " + params.germline
@@ -156,12 +156,11 @@ class InputParser(object):
 
         # some info if weird values get specified
         if params.baseQuality < 0:
-            print("base quality needs to be a positive integer")
+            error("base quality needs to be a positive integer")
             exit(1)
         elif params.baseQuality < 20:
-            print(
-                "lower base quality migh significantly affect the calculations",
-                file=sys.stderr,
+            info(
+                f"Selected low base quality ({params.baseQuality}) might significantly affect results"
             )
         self.minBQ = params.baseQuality
 
@@ -170,9 +169,8 @@ class InputParser(object):
             raise Exception("base quality needs to be a positive integer or 0")
 
         elif params.mappingQuality > 60:
-            print(
-                "BWA caps mapping quality at 60, there will be no reads to consider if MQ>60",
-                file=sys.stderr,
+            info(
+                "BWA caps mapping quality at 60, there will be no reads to consider if MQ>60"
             )
         self.minMQ = params.mappingQuality
 
