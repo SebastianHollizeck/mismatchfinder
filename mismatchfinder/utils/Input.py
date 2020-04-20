@@ -79,10 +79,11 @@ class InputParser(object):
             metavar="BAM",
             default=[],
         )
-        params = parser.parse_args
+        params = parser.parse_args()
 
         # set up the logging before we do anything else
         # now we tell people how much they want to know
+
         basicConfig(
             level=params.verbosity.upper(), format="%(processName)-10s  %(message)s"
         )
