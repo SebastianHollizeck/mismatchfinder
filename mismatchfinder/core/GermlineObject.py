@@ -51,12 +51,7 @@ class GermlineObject(object):
     def loadChromosomeIndex(self, chr):
         # build the NCLS index instead of what allel does, because the caching is
         # slower but the query is SO much faster
-        try:
-            return buildNCLSindex(self.__zarrObj[f"{chr}/variants/POS"][...])
-        except Exception as e:
-            debug("Exception {0}".format(e))
-            debug(f"No variants found in germline resource for chr {chr}")
-            raise KeyError(f"No variants found for chr {chr}")
+        return buildNCLSindex(self.__zarrObj[f"{chr}/variants/POS"][...])
 
     def loadChromsomeAlts(self, chr):
         # this loads the zarr object into memory, which is possible because we only load
@@ -156,7 +151,7 @@ class ChromosomeCache(object):
 
         except KeyError:
             # if this fails it means we couldnt load the index, because it doesnt exist in the cache
-            debug(f"Couldnt find variants for chr {chr} in the cache")
+            debug(f"Zarr storage did not contain chr {chr}")
 
         except Exception as e:
             eStr = getattr(e, "message", repr(e))
