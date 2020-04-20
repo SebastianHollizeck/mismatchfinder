@@ -153,17 +153,19 @@ class ChromosomeCache(object):
             self.index = germlineObj.loadChromosomeIndex(chr)
             self.refs = germlineObj.loadChromsomeRefs(chr)
             self.alts = germlineObj.loadChromsomeAlts(chr)
-            self.chr = chr
+
         except KeyError:
             # if this fails it means we couldnt load the index, because it doesnt exist in the cache
             debug(f"Couldnt find variants for chr {chr} in the cache")
-            self.chr = None
+
         except Exception as e:
             eStr = getattr(e, "message", repr(e))
             error(
                 f"Unknown exception {eStr} '{str(e)}' when trying to cache from zarr storage"
             )
             exit(1)
+        # we set this so we dont try to cache again for the same chromosome
+        self.chr = chr
 
     def findOverlaps(self, pos, loff=0, roff=2):
         # because pysam gives 0 based indexes, we want pos:pos+1 to get all variants in the
