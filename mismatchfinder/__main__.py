@@ -14,7 +14,7 @@ from logging import basicConfig, debug, DEBUG
 
 
 def main():
-    basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
+    basicConfig(level=INFO, format="%(processName)-10s  %(message)s")
     # start with parameter Parsing
     inputs = InputParser()
 

@@ -1,5 +1,5 @@
 from multiprocessing import Process, Semaphore
-from logging import debug, info
+from logging import debug, info, error
 from numpy import array, sort, quantile
 from mismatchfinder.results.Results import Results
 from mismatchfinder.utils.Misc import countLowerCase
@@ -51,7 +51,7 @@ class BamScanner(Process):
     def getMutationSites(self):
 
         # state your purpose ;)
-        debug("Checking reads for mismatches")
+        info("Checking reads for mismatches")
 
         # store the found sites of mutations and how often they occured
         mutSites = {}
@@ -73,7 +73,7 @@ class BamScanner(Process):
         # only a bam index can tell you how many reads are mapped and unmapped, a cram index doesnt
         # tell you
         if self.bamFile.is_bam:
-            debug(
+            info(
                 f"Found {totalIndexReads} reads in the index (mapped: {self.bamFile.mapped}; unmapped: {self.bamFile.unmapped})"
             )
         # get the time we started with this
@@ -94,11 +94,11 @@ class BamScanner(Process):
                 # because only for a bam we know how many reads there are in total, we only print
                 # percentages there
                 if self.bamFile.is_bam:
-                    debug(
+                    info(
                         f"Read through {(nReads/totalIndexReads):3.2%} of reads {readsPerSec:6d} reads per second"
                     )
                 else:
-                    debug(
+                    info(
                         f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
                     )
 
@@ -153,13 +153,13 @@ class BamScanner(Process):
 
         # we are done so we update the status as well
 
-        debug(
+        info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
 
         # did we have an issue with reads?
         if len(fragLengths) == 0:
-            debug(
+            error(
                 f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMReads: {nNoMisMReads}\nBlacklistedReads: {nBlackListed}\nNonWhiteListed: {nNonWhiteListed}"
             )
             raise Exception("No reads left")
@@ -382,7 +382,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
 def countContexts(candMisMatches, germObj=None):
 
     # just tell me what you are doing
-    debug("Counting context occurrences in all mismatches")
+    info("Counting context occurrences in all mismatches")
     # get the time we started with this
     startTime = datetime.datetime.now()
 
@@ -429,7 +429,7 @@ def countContexts(candMisMatches, germObj=None):
     #     contexts[key] += multiplicity
 
     # need to have a newline for that as well
-    debug("Checked 100.00% of mismatches               ")
+    info("Checked 100.00% of mismatches               ")
 
     # this is a temporary write to a file which is meant to see if the samples have overlapping
     # mutations

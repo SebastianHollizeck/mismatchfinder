@@ -49,7 +49,6 @@ class GermlineObject(object):
             return None
 
     def loadChromosomeIndex(self, chr):
-        debug(f"loading index for chr {chr}")
         # build the NCLS index instead of what allel does, because the caching is
         # slower but the query is SO much faster
         try:
@@ -71,7 +70,9 @@ class GermlineObject(object):
 
         if len(candMisMatches) == 0:
             debug(f"we didnt find any sites, so no germline status to be checked")
-            debug(f"Checking germline status for {len(candMisMatches)} mismatches")
+
+        debug(f"Checking germline status for {len(candMisMatches)} mismatches")
+
         nShiftFail = 0
 
         res = {}
