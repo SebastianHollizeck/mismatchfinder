@@ -50,8 +50,9 @@ def main():
             results=tumourResults,
             germObj=germline,
         )
-        # this shedules the running, but will be blocked by the semaphore inside the actual process
-        # to not overload the system
+        # we request the resources here, but return them inside the thread, once it is done
+        semaphore.acquire()
+        # then we start the process
         p.start()
         processes.append(p)
 
@@ -68,8 +69,9 @@ def main():
             results=normalResults,
             germObj=germline,
         )
-        # this shedules the running, but will be blocked by the semaphore inside the actual process
-        # to not overload the system
+        # we request the resources here, but return them inside the thread, once it is done
+        semaphore.acquire()
+        # then we start the process
         p.start()
         processes.append(p)
 

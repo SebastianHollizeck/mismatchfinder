@@ -76,6 +76,9 @@ class BamScanner(Process):
             info(
                 f"Found {totalIndexReads} reads in the index (mapped: {self.bamFile.mapped}; unmapped: {self.bamFile.unmapped})"
             )
+        elif self.bamFile.is_cram:
+            info(f"CRAM index does not support stats")
+
         # get the time we started with this
         startTime = datetime.datetime.now()
 
@@ -219,8 +222,6 @@ class BamScanner(Process):
         }
 
     def run(self):
-        # block the resources for this process
-        self.semaphore.acquire()
 
         # initiate bam object
         self.bamFile = pysam.AlignmentFile(
