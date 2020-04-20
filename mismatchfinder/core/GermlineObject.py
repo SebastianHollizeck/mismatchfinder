@@ -11,7 +11,7 @@ class GermlineObject(object):
 
     def __init__(self, zarrRootFolder):
         super(GermlineObject, self).__init__()
-        self.zarrObj = open_group(zarrRootFolder, mode="r")
+        self.__zarrObj = open_group(zarrRootFolder, mode="r")
 
     # This is a very small function, but it has a heavy backbone attached. this zarr storage was
     # precomputed via scikit-allel, to contain all of gnomad, which then can be loaded with almost
@@ -52,7 +52,7 @@ class GermlineObject(object):
         # build the NCLS index instead of what allel does, because the caching is
         # slower but the query is SO much faster
         try:
-            return buildNCLSindex(self.zarrObj[f"{chr}/variants/POS"][...])
+            return buildNCLSindex(self.__zarrObj[f"{chr}/variants/POS"][...])
         except Exception as e:
             debug("Exception {0}".format(e))
             debug(f"No variants found in germline resource for chr {chr}")
@@ -61,10 +61,10 @@ class GermlineObject(object):
     def loadChromsomeAlts(self, chr):
         # this loads the zarr object into memory, which is possible because we only load
         # a small part of the whole thing
-        return self.zarrObj[f"{chr}/variants/ALT"][...]
+        return self.__zarrObj[f"{chr}/variants/ALT"][...]
 
     def loadChromsomeRefs(self, chr):
-        return self.zarrObj[f"{chr}/variants/REF"][...]
+        return self.__zarrObj[f"{chr}/variants/REF"][...]
 
     def checkGermlineStatus(self, candMisMatches, discard=False):
 
