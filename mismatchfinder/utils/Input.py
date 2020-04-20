@@ -125,7 +125,7 @@ class InputParser(object):
         self.blackListFile = None
         # we really only need to check if the file exists, if a file was actually given to us
         if not params.blackList is None:
-            debug(f"Checking blacklist input file: {params.blacklist}")
+            debug(f"Checking blacklist input file: {params.blackList}")
             if not isfile(params.blackList):
                 raise Exception(
                     "Could not find black list bed file: " + params.blackList
@@ -135,7 +135,7 @@ class InputParser(object):
 
         self.whiteListFile = None
         if not params.whiteList is None:
-            debug(f"Checking whitelist input file: {params.whitelist}")
+            debug(f"Checking whitelist input file: {params.whiteList}")
             if not isfile(params.whiteList):
                 raise Exception(
                     "Could not find whitelist bed file: " + params.whiteList
