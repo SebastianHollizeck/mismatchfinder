@@ -74,7 +74,7 @@ class BamScanner(Process):
         # tell you
         if self.bamFile.is_bam:
             debug(
-                f"Found {totalIndexReads} reads in the index (mapped: {bamFile.mapped}; unmapped: {bamFile.unmapped})"
+                f"Found {totalIndexReads} reads in the index (mapped: {self.bamFile.mapped}; unmapped: {self.bamFile.unmapped})"
             )
         # get the time we started with this
         startTime = datetime.datetime.now()
