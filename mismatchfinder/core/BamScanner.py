@@ -343,8 +343,14 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # so here we just move on to the next position if we find there is a mismatch in the
             # next position
             # this will also take care of trinucleotide variants
-            if refContext[2:].islower():
+            if refContext[2].islower():
                 continue
+            elif refContext[0].islower():
+                # this means its a DBS
+                misMatchClass = 2
+            else:
+                # and this is a SBS
+                misMatchClass = 1
 
             # however we would get the last position of a 3bp mismatch as a dinucleotide change,
             # which we do not want so we also check if there are more than 2 variants within 4
@@ -361,7 +367,13 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # ref: ccG     ref: CcG
             # which we can easily convert to the classes that we want which are the C>T changes in
             # the dinucleotide context CC,CT,TC because those are specific for melanoma
-            mut = (AlignedSegment.reference_name, contigPos, refContext, altContext)
+            mut = (
+                AlignedSegment.reference_name,
+                contigPos,
+                refContext,
+                altContext,
+                misMatchClass,
+            )
 
             # just so we can check what kind of variants we actually put into this we can print
             # the contexts for easy readability (this does not put the context at the same
