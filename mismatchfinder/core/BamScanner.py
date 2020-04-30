@@ -1,7 +1,7 @@
 from multiprocessing import Process, Semaphore
 from logging import debug, info, error
 from numpy import array, sort, quantile
-from mismatchfinder.results.Results import Results
+from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.utils.Misc import countLowerCase
 import pysam
 import datetime
@@ -206,51 +206,56 @@ class BamScanner(Process):
             fragLenQuantiles[quantileRange[i]] = fragLenQuantilesAr[i]
 
         # return a dict of the counts we made
-        return {
-            "sites": mutSites,
-            "nLowQualReads": nLowQualReads,
-            "nNoMisMatchReads": nNoMisMReads,
-            "nBlackListedReads": nBlackListed,
-            "nAlignedReads": nAlignedReads,
-            "nReads": nReads,
-            "nAlignedBases": nAlignedBases,
-            "fragSizeQuantiles": fragLenQuantiles,
-            "nMisMatches": nMisMatches,
-            "nSites": len(mutSites),
-            "misMatchesPerRead": nMisMatches / nAlignedReads,
-            "nDiscordantReads": nDiscordantReads,
-        }
+        return MismatchCandidates(
+            mutSites=mutSites,
+            nReads=nReads,
+            nLowQualReads=nLowQualReads,
+            nNoMisMatchReads=nNoMisMatchReads,
+            nBlackListedReads=nBlackListedReads,
+            nAlignedReads=nAlignedReads,
+            fragmentSizeQuantiles=fragLenQuantiles,
+            nDiscordantReads=nDiscordantReads,
+            nMisMatches=nMisMatches,
+            nAlignedBases=nAlignedBases,
+            bam=self.bamFilePath.name,
+        )
 
     def run(self):
 
         # initiate bam object
         self.bamFile = pysam.AlignmentFile(
-            self.bamFile, "r", require_index=True, reference_filename=self.referenceFile
+            self.bamFilePath,
+            "r",
+            require_index=True,
+            reference_filename=self.referenceFile,
         )
 
         # execute
         # first get all possible sites
         mutCands = self.getMutationSites()
 
-        # then analyse the contexts as well as germline status
-        (contexts, nSomMisMatches, nSomSites, nSomSitesConfident) = countContexts(
-            mutCands["sites"], germObj=self.germObj
-        )
-        # create a results object
-        result = Results(
-            sample="test",
-            nMisMatches=mutCands["nMisMatches"],
-            nSites=mutCands["nSites"],
-            nReads=mutCands["nReads"],
-            nAlignedReads=mutCands["nAlignedReads"],
-            nAlignedBases=mutCands["nAlignedBases"],
-            nSomMisMatches=nSomMisMatches,
-            nSomSites=nSomSites,
-            nSomConfidentSites=nSomSitesConfident,
-            nDiscordantReads=mutCands["nDiscordantReads"],
-        )
+        # filter out germline mismatches
+        mutCands.checkGermlineStatus(self.germObj)
+
+        # count each context (strand agnosticly, so if the rreverse complement is already found we
+        # instead count the reverse complement)
+        mutCands.countContexts()
+
+        if not self.outFileRoot is None:
+            mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
+            mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
+
+        # sadly it takes VERY long to actually put things into the result queue if the sites
+        # copied as well... the issus is the pickling. So we really need to work with this within
+        # this process
+        mutCands.mutSites = None
+        mutCands.fragmentSizeQuantiles = None
+        ## TODO: write out mutSites for "panel of normals"
+        ## TODO: fit a density function for the fragmentSizes?
+        ## TODO: maybe also "delete" the field instead of set to None
+
         # add it to the shared output queue
-        self.results.put(result)
+        self.results.put(mutCands)
 
         # release the block for resources again
         self.semaphore.release()
@@ -375,68 +380,3 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             mutations.append(mut)
 
     return mutations
-
-
-# this function aggregates the found mismatches and their contexts into counts
-# please use a SORTED list of mismatches, to avoid unnecessary caching when using germline check
-# without the check it doesnt really matter
-def countContexts(candMisMatches, germObj=None):
-
-    # just tell me what you are doing
-    info("Counting context occurrences in all mismatches")
-    # get the time we started with this
-    startTime = datetime.datetime.now()
-
-    # this is for the debug output only
-    diNucChanges = []
-
-    # this is where we store our final output
-    contexts = {}
-
-    # somaticStats
-    if not germObj is None:
-        nSomMisMatches = 0
-        nSomSites = 0
-        nSomSitesConfident = 0
-
-        checked = germObj.checkGermlineStatus(candMisMatches)
-        info(
-            f"{len(candMisMatches)} Mismatches were check for germline status and {len(checked)} were found to be somatic"
-        )
-        candMisMatches = checked
-    else:
-        # set to -1 if we do not have a germline
-        nSomMisMatches = None
-        nSomSites = None
-        nSomSitesConfident = None
-
-    # for verbose output
-    nCands = 0
-    totalCand = len(candMisMatches)
-    nShiftFailed = 0
-
-    # for germline checks
-    currChr = None
-    currChrSites = None
-    currChrAlts = None
-    currChrRefs = None
-
-    # # create the key and adjust the counts for this context byt the amount of time this mismatch
-    # # was seen in the reads
-    # key = f"{refContext}>{altContext}"
-    # if key not in contexts:
-    #     contexts[key] = multiplicity
-    # else:
-    #     contexts[key] += multiplicity
-
-    # need to have a newline for that as well
-    info("Checked 100.00% of mismatches               ")
-
-    # this is a temporary write to a file which is meant to see if the samples have overlapping
-    # mutations
-    # with open(f"{os.path.basename(bamfile)}_dinucsites.tsv", "w") as tmpF:
-    #     for (chr, pos, ref, alt) in sorted(diNucChanges):
-    #         tmpF.write(f"{chr}\t{pos}\t{ref}\t{alt}\n")
-
-    # TODO: make this a dict as well?
-    return (contexts, nSomMisMatches, nSomSites, nSomSitesConfident)
