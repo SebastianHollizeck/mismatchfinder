@@ -3,6 +3,7 @@ from sys import stderr
 from pandas import DataFrame, concat
 from matplotlib.pyplot import figure, show
 from numpy import arange, max, min, abs
+from mismatchfinder.utils.Misc import SBSorder, DBSorder
 
 
 class JSONWriter:

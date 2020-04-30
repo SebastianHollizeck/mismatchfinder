@@ -1,5 +1,7 @@
-from numpy import array, int64, arange
+from numpy import array, int64, arange, newaxis
 from ncls import NCLS
+from itertools import product
+from logging import debug
 
 # this function counts how many lower case chars are in a string
 def countLowerCase(string):
