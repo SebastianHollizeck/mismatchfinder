@@ -102,3 +102,24 @@ def scatter_hist(x, y, ax, ax_histy, range=None, label=None, bins=20):
     range = (minY, maxY)
     # and then we just add the plot in a horizontal orientation next to the scatter
     ax_histy.hist(y, range=range, bins=bins, orientation="horizontal", alpha=0.9)
+
+
+def createOutputFiles(outFileRoot):
+
+    # create the full path of the files
+    SBSFile = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")
+    DBSFile = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
+
+    # write the header to the files with one extra column where the name will go
+    with SBSFile.open("w") as fh:
+        fh.write("bam\t" + "\t".join(SBSorder) + "\n")
+
+    with DBSFile.open("w") as fh:
+        fh.write("bam\t" + "\t".join(DBSorder) + "\n")
+
+
+def writeStatsFile(pandas, outFileRoot):
+
+    statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
+    with statsFile.open("w") as fh:
+        pandas.to_csv(fh, sep="\t", index=False)

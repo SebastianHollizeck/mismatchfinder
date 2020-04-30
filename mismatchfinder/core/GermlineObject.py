@@ -42,7 +42,7 @@ class GermlineObject(object):
         if dir is None or dir == "":
             return None
         try:
-            return GermlineObject(dir)
+            return GermlineObject(dir.as_posix())
         except Exception as e:
             # we do not print anything here, because this is just to get None for an empty input
             # if the zarr thing does not exist

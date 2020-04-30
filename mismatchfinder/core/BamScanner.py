@@ -18,13 +18,14 @@ class BamScanner(Process):
         self,
         semaphore,
         results,
-        bamFile,
+        bamFilePath,
         referenceFile,
         minMQ,
         minBQ,
         blackList=None,
         whiteList=None,
         germObj=None,
+        outFileRoot=None,
     ):
         super(BamScanner, self).__init__()
 
@@ -34,12 +35,14 @@ class BamScanner(Process):
         self.minMQ = minMQ
         self.minBQ = minBQ
 
-        self.bamFile = bamFile
+        self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
 
         self.blackList = blackList
         self.whiteList = whiteList
         self.germObj = germObj
+
+        self.outFileRoot = outFileRoot
 
         # basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
 

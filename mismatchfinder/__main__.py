@@ -28,6 +28,8 @@ def main():
     # generate germline object
     germline = GermlineObject.parseZarrRoot(inputs.germlineFile)
 
+    createOutputFiles(inputs.outFileRoot)
+
     # create a block to analyse only the specified amount of processes in parallel
     semaphore = Semaphore(inputs.threads)
 
@@ -41,7 +43,7 @@ def main():
     # spawn processes to analyse each bam individually
     for bam in inputs.bamFiles:
         p = BamScanner(
-            bamFile=bam,
+            bamFilePath=bam,
             referenceFile=inputs.referenceFile,
             minBQ=inputs.minBQ,
             minMQ=inputs.minMQ,
@@ -60,7 +62,7 @@ def main():
     # spawn processes to analyse each bam individually
     for bam in inputs.normals:
         p = BamScanner(
-            bamFile=bam,
+            bamFilePath=bam,
             referenceFile=inputs.referenceFile,
             minBQ=inputs.minBQ,
             minMQ=inputs.minMQ,
@@ -69,6 +71,7 @@ def main():
             semaphore=semaphore,
             results=normalResults,
             germObj=germline,
+            outFileRoot=inputs.outFileRoot,
         )
         # we request the resources here, but return them inside the thread, once it is done
         semaphore.acquire()
