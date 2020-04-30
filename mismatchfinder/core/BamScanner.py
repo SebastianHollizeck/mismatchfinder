@@ -61,9 +61,9 @@ class BamScanner(Process):
 
         # store counts for stats later
         nLowQualReads = 0
-        nNoMisMReads = 0
+        nNoMisMatchReads = 0
         nReads = 0
-        nBlackListed = 0
+        nBlackListedReads = 0
         nNonWhiteListed = 0
         nMisMatches = 0
         nAlignedBases = 0
@@ -123,7 +123,7 @@ class BamScanner(Process):
                 # it is faster to check if there are mismatches before checking if they align to
                 # either white or blacklisted regions
                 if not hasMisMatches(read):
-                    nNoMisMReads += 1
+                    nNoMisMatchReads += 1
                 else:
 
                     # if we did get a blacklist and the read actually is within that region, we
@@ -131,7 +131,7 @@ class BamScanner(Process):
                     if not self.blackList is None and self.blackList.isWithinRegion(
                         read
                     ):
-                        nBlackListed += 1
+                        nBlackListedReads += 1
 
                     else:
                         # only analyse read in the whitelist region if there is one
@@ -166,7 +166,7 @@ class BamScanner(Process):
         # did we have an issue with reads?
         if len(fragLengths) == 0:
             error(
-                f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMReads: {nNoMisMReads}\nBlacklistedReads: {nBlackListed}\nNonWhiteListed: {nNonWhiteListed}"
+                f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}\nNonWhiteListed: {nNonWhiteListed}"
             )
             raise Exception("No reads left")
 
@@ -368,16 +368,19 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # position if there are indels in the read but at the position it is taken from)
             if vis:
                 # print the query (the actual read) on top
-                printLog(AlignedSegment.query_alignment_sequence, addTime=False)
+                debug(AlignedSegment.query_alignment_sequence)
+                line = ""
                 for i in range(0, readPos - 1):
-                    printLog(" ", end="", addTime=False)
-                printLog(altContext, addTime=False)
-                # print the template (the the refernece below)
-                printLog(alignedRefSequence, addTime=False)
+                    line += " "
+                line += altContext
+                debug(line)
+                # print the template (the reference below)
+                debug(alignedRefSequence, addTime=False)
+                line = ""
                 for i in range(0, readPos - 1):
-                    printLog(" ", end="", addTime=False)
-                printLog(refContext, addTime=False)
-                printLog("\n", addTime=False)
+                    line += " "
+                line += refContext
+                debug(line)
 
             # add to the found mutations now that everything is sorted out
             mutations.append(mut)
