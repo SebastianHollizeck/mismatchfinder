@@ -3,12 +3,12 @@
 
 from .utils.Input import InputParser
 from .results.Results import convertToPandasDataFrame
-from .utils.Output import plotStats
+from .utils.Output import plotStats, createOutputFiles, writeStatsFile
 from .core.BedObject import BedObject
 from .core.GermlineObject import GermlineObject
 from .core.BamScanner import BamScanner
 from multiprocessing import Semaphore, SimpleQueue
-from logging import debug
+from logging import debug, info, shutdown
 
 # This will run everything.
 
@@ -52,6 +52,7 @@ def main():
             semaphore=semaphore,
             results=tumourResults,
             germObj=germline,
+            outFileRoot=inputs.outFileRoot,
         )
         # we request the resources here, but return them inside the thread, once it is done
         semaphore.acquire()
@@ -79,16 +80,20 @@ def main():
         p.start()
         processes.append(p)
 
+    debug("waiting for join")
     # wait for all processes to finish before we continue
     for p in processes:
         p.join()
+
+    statsTable = convertToPandasDataFrame(tumourResults)
+    writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
 
     # output results as just the data or even with plot
     # plotStats(
     #     convertToPandasDataFrame(tumourResults),
     #     normalDf=convertToPandasDataFrame(normalResults),
     # )
-    # print(tumourResults.get())
+    info("FINISHED")
 
 
 if __name__ == "__main__":
