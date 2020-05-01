@@ -166,7 +166,7 @@ class BamScanner(Process):
         # did we have an issue with reads?
         if len(fragLengths) == 0:
             error(
-                f"Could not detect any reads from Bam ({self.bamFile}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}\nNonWhiteListed: {nNonWhiteListed}"
+                f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}\nNonWhiteListed: {nNonWhiteListed}"
             )
             raise Exception("No reads left")
 
