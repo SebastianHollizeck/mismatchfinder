@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 
-from .utils.Input import InputParser
-from .results.Results import convertToPandasDataFrame
-from .utils.Output import plotStats, createOutputFiles, writeStatsFile
+from logging import debug, info
+from multiprocessing import Semaphore, SimpleQueue
+
+from .core.BamScanner import BamScanner
 from .core.BedObject import BedObject
 from .core.GermlineObject import GermlineObject
-from .core.BamScanner import BamScanner
-from multiprocessing import Semaphore, SimpleQueue
-from logging import debug, info, shutdown
+from .results.Results import convertToPandasDataFrame
+from .utils.Input import InputParser
+from .utils.Output import createOutputFiles, writeStatsFile
 
 # This will run everything.
 

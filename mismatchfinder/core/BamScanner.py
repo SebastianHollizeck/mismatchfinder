@@ -168,7 +168,7 @@ class BamScanner(Process):
             error(
                 f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}\nNonWhiteListed: {nNonWhiteListed}"
             )
-            raise Exception("No reads left")
+            raise Exception(f"No reads left for {self.bamFilePath}")
 
         # we use fragLengths here, because it already contains all aligned reads
         nAlignedReads = len(fragLengths)
@@ -224,7 +224,6 @@ class BamScanner(Process):
         )
 
     def run(self):
-
         # initiate bam object
         self.bamFile = pysam.AlignmentFile(
             self.bamFilePath,

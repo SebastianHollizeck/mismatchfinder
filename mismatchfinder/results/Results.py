@@ -1,15 +1,16 @@
+from copy import deepcopy
+from logging import debug, info
+
 from pandas import DataFrame, concat
-from numpy import array, savetxt
-from mismatchfinder.core.GermlineObject import GermlineObject, ChromosomeCache
+
+from mismatchfinder.core.GermlineObject import ChromosomeCache
 from mismatchfinder.utils.Misc import (
+    DBSrefs,
+    convertToDBSTable,
+    convertToSBSTable,
     countLowerCase,
     reverseComplement,
-    convertToSBSTable,
-    convertToDBSTable,
-    DBSrefs,
 )
-from copy import deepcopy
-from logging import info, error, debug
 
 
 def convertToPandasDataFrame(resultQueue):

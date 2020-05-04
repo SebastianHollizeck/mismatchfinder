@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-
-from argparse import ArgumentParser, REMAINDER
+from argparse import ArgumentParser
+from logging import basicConfig, debug, error, info
 from pathlib import Path
-from os import access, W_OK
+
 from pysam import AlignmentFile
-from logging import debug, info, error, basicConfig
 
 
 class InputParser(object):
@@ -203,14 +201,8 @@ class InputParser(object):
 
         oFile = None
         if not params.outFileRoot is None:
-            # check if we can create this file
-            # TODO: think about if we want to always append or maybe recreate something?
-            # first we just test if we can write to the file
+            # I REALLY WANT TO TEST HERE IF THE directory allows write acces, as it would suck to run through the whole process only to not be able to write the results
             oFile = Path(params.outFileRoot)
-            try:
-                oFile.open(mode="a")
-            except:
-                raise Exception(f"Outputfile {file} is not writable")
         # we also want the None, so we do this outside of the if
         self.outFileRoot = oFile
 

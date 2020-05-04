@@ -1,9 +1,9 @@
-from zarr import open_group
-from ncls import NCLS
-from numpy import array, int64, arange
-from mismatchfinder.utils.Misc import countLowerCase, buildNCLSindex
-from logging import debug, info, error
+from logging import debug, error
 from sys import exit
+
+from zarr import open_group
+
+from mismatchfinder.utils.Misc import buildNCLSindex
 
 
 class GermlineObject(object):

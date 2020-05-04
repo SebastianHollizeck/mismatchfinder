@@ -1,9 +1,12 @@
 from datetime import datetime
+from logging import error
 from sys import stderr
-from pandas import DataFrame, concat
+
 from matplotlib.pyplot import figure, show
-from numpy import arange, max, min, abs
-from mismatchfinder.utils.Misc import SBSorder, DBSorder
+from numpy import abs, max, min
+from pandas import DataFrame, concat
+
+from mismatchfinder.utils.Misc import DBSorder, SBSorder
 
 
 class JSONWriter:
@@ -112,11 +115,15 @@ def createOutputFiles(outFileRoot):
     DBSFile = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
 
     # write the header to the files with one extra column where the name will go
-    with SBSFile.open("w") as fh:
-        fh.write("bam\t" + "\t".join(SBSorder) + "\n")
+    try:
+        with SBSFile.open("w") as fh:
+            fh.write("bam\t" + "\t".join(SBSorder) + "\n")
 
-    with DBSFile.open("w") as fh:
-        fh.write("bam\t" + "\t".join(DBSorder) + "\n")
+        with DBSFile.open("w") as fh:
+            fh.write("bam\t" + "\t".join(DBSorder) + "\n")
+    except:
+        error(f"Could not write into folder{outFileRoot.parent}")
+        exit(1)
 
 
 def writeStatsFile(pandas, outFileRoot):
