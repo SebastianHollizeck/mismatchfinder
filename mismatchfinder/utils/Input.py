@@ -91,7 +91,8 @@ class InputParser(object):
         # now we tell people how much they want to know
 
         basicConfig(
-            level=params.verbosity.upper(), format="%(processName)-10s  %(message)s"
+            level=params.verbosity.upper(),
+            format="%(asctime)s %(levelname)-8s %(processName)-10s  %(message)s",
         )
 
         ############################################################################################
