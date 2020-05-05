@@ -93,8 +93,8 @@ def main():
     for p in processes:
         p.join()
 
-    statsTable = convertToPandasDataFrame(tumourResults)
-    writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
+    # statsTable = convertToPandasDataFrame(tumourResults)
+    # writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
 
     # output results as just the data or even with plot
     # plotStats(
