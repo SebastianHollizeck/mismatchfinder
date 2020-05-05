@@ -257,24 +257,19 @@ class MismatchCandidates(object):
 
     def writeStatsToFile(self, outFileRoot, bamFilePath):
 
-        file = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
-
-        # we check if this is the first time we write to this file (to see if we need a header)
-        firstLine = True
-        with open(file, "r") as testFH:
-            for line in testFH:
-                firstLine = False
-                break
-
+        file = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
+        stats = self.convertToPandasDataFrameRow()
         # we append this, as we do not want to overwrite if there are several threads writing to it
         debug(f"Writing stats to file: {file}")
         with open(file, "a") as outFH:
-            if firstLine:
-                self.convertToPandasDataFrameRow().to_csv(sep="\t", index=False)
+
+            # if the position in the file is still 0 we need to write the header, otherwise we just
+            # add the line
+            if outFH.tell() == 0:
+                debug(f"Writing header to file {file}")
+                stats.to_csv(outFH, sep="\t", index=False)
             else:
-                self.convertToPandasDataFrameRow().to_csv(
-                    sep="\t", header=False, index=False
-                )
+                stats.to_csv(outFH, sep="\t", header=False, index=False)
 
     def cleanUpForPickle(self):
         fields = self.__dict__
