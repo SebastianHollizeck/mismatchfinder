@@ -2,7 +2,7 @@
 
 
 from logging import debug, info
-from multiprocessing import Semaphore, SimpleQueue
+from multiprocessing import Semaphore, SimpleQueue, Lock
 
 from .core.BamScanner import BamScanner
 from .core.BedObject import BedObject
@@ -33,6 +33,8 @@ def main():
 
     # create a block to analyse only the specified amount of processes in parallel
     semaphore = Semaphore(inputs.threads)
+    # create a lock for file write access to ensure everything is save
+    fhLock = Lock()
 
     # store all created processes
     processes = []
@@ -51,6 +53,7 @@ def main():
             blackList=blackList,
             whiteList=whiteList,
             semaphore=semaphore,
+            lock=fhLock,
             results=tumourResults,
             germObj=germline,
             outFileRoot=inputs.outFileRoot,
@@ -71,6 +74,7 @@ def main():
             blackList=blackList,
             whiteList=whiteList,
             semaphore=semaphore,
+            lock=fhLock,
             results=normalResults,
             germObj=germline,
             outFileRoot=inputs.outFileRoot,
@@ -80,6 +84,9 @@ def main():
         # then we start the process
         p.start()
         processes.append(p)
+
+    # TODO: check if we need to consume the queue here already to reduce the memory footprint, or
+    # if the memory requirement is actually from the zarr storage being cached so often
 
     debug("waiting for join")
     # wait for all processes to finish before we continue

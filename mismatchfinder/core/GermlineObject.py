@@ -61,6 +61,11 @@ class GermlineObject(object):
     def loadChromsomeRefs(self, chr):
         return self.__zarrObj[f"{chr}/variants/REF"][...]
 
+    # TODO: test if we could store the cache object in the germline object for each chromosome
+    # that way we would only need to cache once? at least theoretically, if the object is stored
+    # concurrent and not deep copied for each process, which very well might be
+    # Also, the memory requirements would be much higher as well
+
 
 class ChromosomeCache(object):
     """Very simple object that just stores the cached information from the zarr object"""

@@ -238,7 +238,7 @@ class MismatchCandidates(object):
         file = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")
 
         # we append this, as we do not want to overwrite if there are several threads writing to it
-        debug(f"Writing to file: {file}")
+        debug(f"Writing SBS to file: {file}")
         with open(file, "a") as outFH:
             # because we only want one row, we need newline instead of delimiter
             joined = "\t".join(str(x) for x in self.SBScontexts)
@@ -249,11 +249,32 @@ class MismatchCandidates(object):
         file = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
 
         # we append this, as we do not want to overwrite if there are several threads writing to it
-        debug(f"Writing to file: {file}")
+        debug(f"Writing DBS to file: {file}")
         with open(file, "a") as outFH:
             # because we only want one row, we need newline instead of delimiter
             joined = "\t".join(str(x) for x in self.DBScontexts)
             outFH.write(f"{bamFilePath.name}\t{joined}\n")
+
+    def writeStatsToFile(self, outFileRoot, bamFilePath):
+
+        file = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
+
+        # we check if this is the first time we write to this file (to see if we need a header)
+        firstLine = True
+        with open(file, "r") as testFH:
+            for line in testFH:
+                firstLine = False
+                break
+
+        # we append this, as we do not want to overwrite if there are several threads writing to it
+        debug(f"Writing stats to file: {file}")
+        with open(file, "a") as outFH:
+            if firstLine:
+                self.convertToPandasDataFrameRow().to_csv(sep="\t", index=False)
+            else:
+                self.convertToPandasDataFrameRow().to_csv(
+                    sep="\t", header=False, index=False
+                )
 
     def cleanUpForPickle(self):
         fields = self.__dict__

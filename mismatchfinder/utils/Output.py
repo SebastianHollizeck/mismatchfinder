@@ -27,16 +27,6 @@ def printLog(str, end="\n", addTime=True):
     print(str, end=end, file=stderr)
 
 
-def convertToPandasDataframe(resultQueue):
-    rowDfs = []
-    # go through all results and convert them to a pandas dataframe
-    while not resultQueue.empty:
-        res = resultQueue.get()
-        rowDfs.append(DataFrame([res.nReads, res.alignedReads, res.nAlignedBases]))
-
-    df = concat(rowDfs, ignore_index=True)
-
-
 def plotStats(tumourDf, normalDf=None):
 
     # create the drawing plane
@@ -113,6 +103,7 @@ def createOutputFiles(outFileRoot):
     # create the full path of the files
     SBSFile = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")
     DBSFile = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
+    statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
 
     # write the header to the files with one extra column where the name will go
     try:
@@ -121,6 +112,10 @@ def createOutputFiles(outFileRoot):
 
         with DBSFile.open("w") as fh:
             fh.write("bam\t" + "\t".join(DBSorder) + "\n")
+
+        with statsFile.open("w") as fh:
+            # we just want to create the file here
+            pass
     except:
         error(f"Could not write into folder{outFileRoot.parent}")
         exit(1)

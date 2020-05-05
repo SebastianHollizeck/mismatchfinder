@@ -17,6 +17,7 @@ class BamScanner(Process):
     def __init__(
         self,
         semaphore,
+        lock,
         results,
         bamFilePath,
         referenceFile,
@@ -31,6 +32,7 @@ class BamScanner(Process):
 
         self.semaphore = semaphore
         self.results = results
+        self.lock = lock
 
         self.minMQ = minMQ
         self.minBQ = minBQ
@@ -246,8 +248,11 @@ class BamScanner(Process):
         mutCands.countContexts()
 
         if not self.outFileRoot is None:
-            mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
-            mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
+            # we request only one thread to write to the files at one time
+            with self.lock:
+                mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
+                mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
+                mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
 
         # sadly it takes VERY long to actually put things into the result queue if the sites
         # copied as well... the issus is the pickling. So we really need to work with this within
