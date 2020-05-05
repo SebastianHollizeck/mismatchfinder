@@ -224,6 +224,8 @@ class BamScanner(Process):
         )
 
     def run(self):
+
+        info(f"Starting scan of {self.bamFilePath.name}")
         # initiate bam object
         self.bamFile = pysam.AlignmentFile(
             self.bamFilePath,
@@ -256,11 +258,14 @@ class BamScanner(Process):
         ## TODO: fit a density function for the fragmentSizes?
         ## TODO: maybe also "delete" the field instead of set to None
 
+        debug("Adding result object to queue")
         # add it to the shared output queue
         self.results.put(mutCands)
 
+        debug("Releasing requested resource lock")
         # release the block for resources again
         self.semaphore.release()
+        info(f"Finished scan of {self.bamFilePath.name}")
 
 
 # this is a simple check if a MDstring contains any mismatches
