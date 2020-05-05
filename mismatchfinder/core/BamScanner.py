@@ -258,9 +258,12 @@ class BamScanner(Process):
         ## TODO: fit a density function for the fragmentSizes?
         ## TODO: maybe also "delete" the field instead of set to None
 
+        # removing intermediate fields and things that are not required anymore
+        # mutCands.cleanUpForPickle()
+
         debug("Adding result object to queue")
         # add it to the shared output queue
-        self.results.put(mutCands)
+        self.results.put(mutCands.convertToPandasDataFrameRow())
 
         debug("Releasing requested resource lock")
         # release the block for resources again

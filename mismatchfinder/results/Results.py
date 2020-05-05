@@ -20,8 +20,7 @@ def convertToPandasDataFrame(resultQueue):
     # go through all results and convert them to a pandas dataframe
     while not resultQueue.empty():
         res = resultQueue.get()
-        resDf = res.convertToPandasDataFrameRow()
-        rowDfs.append(resDf)
+        rowDfs.append(res)
 
     df = concat(rowDfs)
     return df
@@ -64,19 +63,12 @@ class MismatchCandidates(object):
         try:
             fields.pop("mutSites")
             fields.pop("fragmentSizeQuantiles")
-        except KeyError:
-            debug(
-                "Did not find required fields of CandadateMismatches object. This is not a problem for the conversion but hints at a deeper problem"
-            )
-
-        try:
-            # TODO: maybe we can make this usable somehow in the dataframe... maybe convert it to
-            # horizontal from vertical?
             fields.pop("SBScontexts")
             fields.pop("DBScontexts")
         except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
             debug(
-                "Did not find context fields in candidatemismatch object, if you want those, use the countContexts method"
+                "Some fields were already deleted due to cleanup, this is not a problem"
             )
 
         # use the rest to make a dataframe
@@ -238,6 +230,9 @@ class MismatchCandidates(object):
         info(f"Found {self.nSomaticMisMatchSites} somatic sites")
         self.mutSites = res
 
+        # we really need to clean up after ourselves because memory foot prints are horrendous
+        del cache
+
     def writeSBSToFile(self, outFileRoot, bamFilePath):
 
         file = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")
@@ -259,3 +254,15 @@ class MismatchCandidates(object):
             # because we only want one row, we need newline instead of delimiter
             joined = "\t".join(str(x) for x in self.DBScontexts)
             outFH.write(f"{bamFilePath.name}\t{joined}\n")
+
+    def cleanUpForPickle(self):
+        fields = self.__dict__
+
+        if "mutSites" in fields:
+            del self.mutSites
+        if "fragmentSizeQuantiles" in fields:
+            del self.fragmentSizeQuantiles
+        if "SBScontexts" in fields:
+            del self.SBScontexts
+        if "DBScontexts" in fields:
+            del self.DBScontexts
