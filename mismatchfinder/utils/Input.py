@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from logging import basicConfig, debug, error, info
 from pathlib import Path
+from sys import exit
 
 from pysam import AlignmentFile
 
@@ -120,7 +121,7 @@ class InputParser(object):
                 # analysis without any issues
                 # we could theoretically do this with just file endings and it would probably be
                 # faster, but then we also would need to check for the index
-                with AlignmentFile(bam, "r", require_index=True) as tFile:
+                with AlignmentFile(bam, "r") as tFile:
                     if tFile.is_cram and self.referenceFile is None:
                         raise Exception("CRAMs need a reference")
                 self.bamFiles.append(bam)
@@ -137,7 +138,7 @@ class InputParser(object):
             else:
                 # this will be done multiple times, so you can combine bams and crams in the
                 # analysis without any issues
-                with AlignmentFile(bam, "r", require_index=True) as tFile:
+                with AlignmentFile(bam, "r") as tFile:
                     if tFile.is_cram and self.referenceFile is None:
                         raise Exception("CRAMs need a reference")
                 self.normals.append(bam)

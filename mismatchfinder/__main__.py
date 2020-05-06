@@ -88,7 +88,7 @@ def main():
     # TODO: check if we need to consume the queue here already to reduce the memory footprint, or
     # if the memory requirement is actually from the zarr storage being cached so often
 
-    debug("waiting for join")
+    debug("Waiting for all parallel processes to finish")
     # wait for all processes to finish before we continue
     for p in processes:
         p.join()

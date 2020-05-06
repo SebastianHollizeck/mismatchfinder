@@ -73,17 +73,6 @@ class BamScanner(Process):
         # store the fragment lengths for later
         fragLengths = []
 
-        totalIndexReads = self.bamFile.mapped + self.bamFile.unmapped
-
-        # only a bam index can tell you how many reads are mapped and unmapped, a cram index doesnt
-        # tell you
-        if self.bamFile.is_bam:
-            info(
-                f"Found {totalIndexReads} reads in the index (mapped: {self.bamFile.mapped}; unmapped: {self.bamFile.unmapped})"
-            )
-        elif self.bamFile.is_cram:
-            info(f"CRAM index does not support stats")
-
         # get the time we started with this
         startTime = datetime.datetime.now()
 
@@ -96,19 +85,14 @@ class BamScanner(Process):
                 currTime = datetime.datetime.now()
                 deltaTime = currTime - startTime
                 readsPerSec = nReads / deltaTime.total_seconds()
+
                 # we really just care about the general aread so we round to the next hundred
                 readsPerSec = int(round(readsPerSec, -2))
 
-                # because only for a bam we know how many reads there are in total, we only print
-                # percentages there
-                if self.bamFile.is_bam:
-                    info(
-                        f"Read through {(nReads/totalIndexReads):3.2%} of reads {readsPerSec:6d} reads per second"
-                    )
-                else:
-                    info(
-                        f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
-                    )
+                # give some info how far we are already through the bam
+                info(
+                    f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
+                )
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
