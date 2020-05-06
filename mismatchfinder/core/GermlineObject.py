@@ -2,7 +2,8 @@ from logging import debug, error
 from sys import exit
 
 from numpy import array
-from zarr import open_group
+from zarr import open_group, ProcessSynchronizer
+from tempfile import mkdtemp
 
 from mismatchfinder.utils.Misc import buildNCLSindex
 
@@ -12,7 +13,9 @@ class GermlineObject(object):
 
     def __init__(self, zarrRootFolder):
         super(GermlineObject, self).__init__()
-        self.__zarrObj = open_group(zarrRootFolder, mode="r")
+        lockFilePath = mkdtemp(prefix="zarr", suffix=".sync")
+        synchronizer = ProcessSynchronizer(lockFilePath)
+        self.__zarrObj = open_group(zarrRootFolder, mode="r", synchronizer=synchronizer)
 
     # This is a very small function, but it has a heavy backbone attached. this zarr storage was
     # precomputed via scikit-allel, to contain all of gnomad, which then can be loaded with almost
@@ -47,6 +50,10 @@ class GermlineObject(object):
         except Exception as e:
             # we do not print anything here, because this is just to get None for an empty input
             # if the zarr thing does not exist
+            eStr = getattr(e, "message", repr(e))
+            debug(
+                f"Unknown exception {eStr} '{str(e)}' when creating zarr api from folder {dir}"
+            )
             return None
 
     def loadChromosomeIndex(self, chr):
@@ -129,10 +136,10 @@ class ChromosomeCache(object):
 
     def getAlts(self, pos):
         """This fetches the alt entries from the zarr storage without loading the whole thing into memory"""
-
+        # we can have multiple alts, so we get the row fitting with that index
         return self.alts.oindex[pos, :]
 
     def getRefs(self, pos):
         """This fetches the ref entry from zarr storage without loading the whole thing into memory"""
-
+        # there is only one ref per set of alts, so we can select that one ref
         return self.refs.oindex[pos]
