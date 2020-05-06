@@ -177,7 +177,7 @@ class MismatchCandidates(object):
 
             # we do not really need the start and stop here, we could just use the idx, but
             # NCLS gives the full info anyways
-            for (start, stop, idx) in varIdxs:
+            for (start, stop, ref, alts) in varIdxs:
                 # this is the position in the contexts we are talking about (again pysam is 0
                 # based which makes this part a tad easier)
                 offset = start - pos
@@ -188,12 +188,11 @@ class MismatchCandidates(object):
                     continue
 
                 # if the ref doesnt have length 1 we are dealing with an indel, and we dont care
-                ref = cache.refs[idx]
                 if len(ref) != 1:
                     continue
 
                 # we can have several alts, so we check all of them
-                for alt in cache.alts[idx]:
+                for alt in alts:
                     # again if this is not of length 1 we have an indel and we do not really
                     # want to deal with it
                     if len(alt) != 1:

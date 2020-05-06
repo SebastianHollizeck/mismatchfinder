@@ -1,6 +1,7 @@
 from logging import debug, error
 from sys import exit
 
+from numpy import array
 from zarr import open_group
 
 from mismatchfinder.utils.Misc import buildNCLSindex
@@ -56,10 +57,10 @@ class GermlineObject(object):
     def loadChromsomeAlts(self, chr):
         # this loads the zarr object into memory, which is possible because we only load
         # a small part of the whole thing
-        return self.__zarrObj[f"{chr}/variants/ALT"][...]
+        return self.__zarrObj[f"{chr}/variants/ALT"]
 
     def loadChromsomeRefs(self, chr):
-        return self.__zarrObj[f"{chr}/variants/REF"][...]
+        return self.__zarrObj[f"{chr}/variants/REF"]
 
     # TODO: test if we could store the cache object in the germline object for each chromosome
     # that way we would only need to cache once? at least theoretically, if the object is stored
@@ -98,12 +99,40 @@ class ChromosomeCache(object):
         # getting the index which corresponds to the chromosomal position
         try:
             res = self.index.find_overlap(pos + loff, pos + roff)
+            # get the iterators for each of the entries together
+
+            # transform tuples to lists
+            zippedIts = list(zip(*res))
+
+            if len(zippedIts) == 0:
+                return []
+
+            # get each list seperatly
+            starts = zippedIts[0]
+            stops = zippedIts[1]
+            idxs = array(its[2])
+
+            # load required entries from storage
+            refs = self.getRefs(idxs)
+            alts = self.getAlts(idxs)
+
+            res = zip(starts, stops, refs, alts)
 
         except AttributeError:
-            # this is when there are no germline variants reported for this site
+            # this is when there are no germline variants reported for this contig
             res = []
         except Exception as e:
             eStr = getattr(e, "message", repr(e))
             error(f"Unknown exception {eStr} '{str(e)}' when querying cache")
             exit(1)
         return res
+
+    def getAlts(self, pos):
+        """This fetches the alt entries from the zarr storage without loading the whole thing into memory"""
+
+        return self.alts.oindex[pos, :]
+
+    def getRefs(self, pos):
+        """This fetches the ref entry from zarr storage without loading the whole thing into memory"""
+
+        return self.refs.oindex[pos]
