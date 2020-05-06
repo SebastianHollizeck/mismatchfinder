@@ -77,7 +77,14 @@ class BamScanner(Process):
         startTime = datetime.datetime.now()
 
         # we work directly on the bam without iterator creation
-        for read in self.bamFile:
+        bamFile = pysam.AlignmentFile(
+            self.bamFilePath,
+            "r",
+            require_index=True,
+            reference_filename=self.referenceFile,
+        )
+
+        for read in bamFile:
             nReads += 1
             # report every 100 reads
             if nReads % 1000000 == 0:
@@ -213,12 +220,6 @@ class BamScanner(Process):
 
         info(f"Starting scan of {self.bamFilePath.name}")
         # initiate bam object
-        self.bamFile = pysam.AlignmentFile(
-            self.bamFilePath,
-            "r",
-            require_index=True,
-            reference_filename=self.referenceFile,
-        )
 
         # execute
         # first get all possible sites
