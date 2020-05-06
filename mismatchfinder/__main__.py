@@ -3,6 +3,7 @@
 
 from logging import debug, info
 from multiprocessing import Semaphore, SimpleQueue, Lock
+from time import sleep
 
 from .core.BamScanner import BamScanner
 from .core.BedObject import BedObject
@@ -90,8 +91,20 @@ def main():
 
     debug("Waiting for all parallel processes to finish")
     # wait for all processes to finish before we continue
-    for p in processes:
-        p.join()
+    alive = True
+    while alive:
+        alive = False
+        for p in processes:
+            # as long as one process is still going we need to wait
+            if p.is_alive():
+                alive = True
+                debug(f"{p.name} is still analysing")
+            else:
+                # but if this specific process is dead, we remove it from the list of processes
+                debug(f"{p.name} has finished and is removed from the pool")
+                processes.remove(p)
+        ## TODO: play around with the amount, but 30 seconds seems fair enough
+        sleep(30)
 
     # statsTable = convertToPandasDataFrame(tumourResults)
     # writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
