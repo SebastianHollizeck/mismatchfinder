@@ -103,8 +103,10 @@ def main():
                 # but if this specific process is dead, we remove it from the list of processes
                 debug(f"{p.name} has finished and is removed from the pool")
                 processes.remove(p)
+                continue
         ## TODO: play around with the amount, but 30 seconds seems fair enough
-        sleep(30)
+        if alive:
+            sleep(30)
 
     # statsTable = convertToPandasDataFrame(tumourResults)
     # writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
