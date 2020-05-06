@@ -110,7 +110,7 @@ class ChromosomeCache(object):
             # get each list seperatly
             starts = zippedIts[0]
             stops = zippedIts[1]
-            idxs = array(its[2])
+            idxs = array(zippedIts[2])
 
             # load required entries from storage
             refs = self.getRefs(idxs)
