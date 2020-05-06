@@ -1,10 +1,13 @@
-from multiprocessing import Process, Semaphore
-from logging import debug, info, error
-from numpy import array, sort, quantile
+import datetime
+from logging import debug, error, info
+from multiprocessing import Process
+from sys import getsizeof
+
+import pysam
+from numpy import array, quantile, sort
+
 from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.utils.Misc import countLowerCase
-import pysam
-import datetime
 
 #
 # basicConfig(level=DEBUG, format="(%(threadName)-9s) %(message)s")
@@ -201,6 +204,9 @@ class BamScanner(Process):
         for i in range(0, len(quantileRange)):
             fragLenQuantiles[quantileRange[i]] = fragLenQuantilesAr[i]
 
+        debug(
+            f"Memory required by mismatch sites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
+        )
         # return a dict of the counts we made
         return MismatchCandidates(
             mutSites=mutSites,
