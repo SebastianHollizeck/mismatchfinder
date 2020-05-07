@@ -12,9 +12,13 @@ from .results.Results import convertToPandasDataFrame
 from .utils.Input import InputParser
 from .utils.Output import createOutputFiles, writeStatsFile
 
+from sys import getsizeof
+
+from memory_profiler import profile
+
+
 # This will run everything.
-
-
+@profile
 def main():
 
     # start with parameter Parsing

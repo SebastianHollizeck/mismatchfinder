@@ -9,6 +9,9 @@ from numpy import array, quantile, sort
 from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.utils.Misc import countLowerCase
 
+
+from memory_profiler import profile
+
 #
 # basicConfig(level=DEBUG, format="(%(threadName)-9s) %(message)s")
 #
@@ -56,6 +59,7 @@ class BamScanner(Process):
     # qualThreshold is for the base quality
     # bedObj is to discard reads mapping to those blacklisted areas in the bed
     # minMQ directly ignores reads which have a mappingquality lower
+    @profile
     def getMutationSites(self):
 
         # state your purpose ;)
@@ -225,6 +229,7 @@ class BamScanner(Process):
             bam=self.bamFilePath.name,
         )
 
+    @profile
     def run(self):
 
         info(f"Starting scan of {self.bamFilePath.name}")
@@ -234,6 +239,7 @@ class BamScanner(Process):
         # first get all possible sites
         mutCands = self.getMutationSites()
 
+        debug(f"Size of the final mutCands: {getsizeof(mutCands)/1024/1024:.2f} Mb")
         # filter out germline mismatches
         mutCands.checkGermlineStatus(self.germObj)
 
