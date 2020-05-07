@@ -59,7 +59,7 @@ class BamScanner(Process):
     # qualThreshold is for the base quality
     # bedObj is to discard reads mapping to those blacklisted areas in the bed
     # minMQ directly ignores reads which have a mappingquality lower
-    @profile
+    # @profile
     def getMutationSites(self):
 
         # state your purpose ;)
@@ -229,7 +229,7 @@ class BamScanner(Process):
             bam=self.bamFilePath.name,
         )
 
-    @profile
+    # @profile
     def run(self):
 
         info(f"Starting scan of {self.bamFilePath.name}")
