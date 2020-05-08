@@ -62,8 +62,20 @@ class MismatchCandidates(object):
         # remove fields which have objects or similar as value
         try:
             fields.pop("mutSites")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("Mutsites not found in mutCands, not required")
+        try:
             fields.pop("fragmentSizeQuantiles")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("fragmentSizeQuantiles not found in mutCands, not required")
+        try:
             fields.pop("SBScontexts")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("SBScontexts not found in mutCands, not required")
+        try:
             fields.pop("DBScontexts")
         except KeyError:
             # this is acceptable because they are actually removed for pickling the results

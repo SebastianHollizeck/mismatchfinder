@@ -97,6 +97,7 @@ def main():
     # wait for all processes to finish before we continue
     for p in processes:
         p.join()
+        # if it is joined, then we can remove it, to ensure we dont waste memory
 
     # statsTable = convertToPandasDataFrame(tumourResults)
     # writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)

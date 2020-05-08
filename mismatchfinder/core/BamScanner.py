@@ -59,7 +59,7 @@ class BamScanner(Process):
     # qualThreshold is for the base quality
     # bedObj is to discard reads mapping to those blacklisted areas in the bed
     # minMQ directly ignores reads which have a mappingquality lower
-    # @profile
+    @profile
     def getMutationSites(self):
 
         # state your purpose ;)
@@ -166,6 +166,8 @@ class BamScanner(Process):
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
 
+        bamFile.close()
+
         # did we have an issue with reads?
         if len(fragLengths) == 0:
             error(
@@ -211,9 +213,9 @@ class BamScanner(Process):
         for i in range(0, len(quantileRange)):
             fragLenQuantiles[quantileRange[i]] = fragLenQuantilesAr[i]
 
-        debug(
-            f"Memory required by mismatch sites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
-        )
+        # we delete everything so we dont blow up memory requirements
+        del fragLengths
+
         # return a dict of the counts we made
         return MismatchCandidates(
             mutSites=mutSites,
@@ -410,3 +412,6 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             mutations.append(mut)
 
     return mutations
+
+    def cleanUp(self):
+        """This is meant to destroy the object, such that the memory requirements are basically null"""
