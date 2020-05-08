@@ -110,6 +110,8 @@ class BamScanner(Process):
                 debug(
                     f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
                 )
+                if nReads >= 3000000:
+                    break
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
