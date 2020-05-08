@@ -229,7 +229,7 @@ class BamScanner(Process):
             bam=self.bamFilePath.name,
         )
 
-    # @profile
+    @profile
     def run(self):
 
         info(f"Starting scan of {self.bamFilePath.name}")
