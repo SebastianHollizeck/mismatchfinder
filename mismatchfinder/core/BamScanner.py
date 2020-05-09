@@ -7,7 +7,7 @@ import pysam
 from numpy import array, quantile, sort
 
 from mismatchfinder.results.Results import MismatchCandidates
-from mismatchfinder.utils.Misc import countLowerCase
+from mismatchfinder.utils.Misc import countLowerCase, limitMemory, display_top
 
 
 # from memory_profiler import profile
@@ -22,20 +22,7 @@ import gc
 class BamScanner(Process):
     """Class which scans a Bam for TMB and other interesting features"""
 
-    def __init__(
-        self,
-        semaphore,
-        lock,
-        results,
-        bamFilePath,
-        referenceFile,
-        minMQ,
-        minBQ,
-        blackList=None,
-        whiteList=None,
-        germObj=None,
-        outFileRoot=None,
-    ):
+    def __init__(self, semaphore, lock, results, bamFilePath, referenceFile, minMQ, minBQ, blackList=None, whiteList=None, germObj=None, outFileRoot=None):
         super(BamScanner, self).__init__()
 
         self.semaphore = semaphore
@@ -87,9 +74,7 @@ class BamScanner(Process):
         startTime = datetime.datetime.now()
 
         # we work directly on the bam without iterator creation
-        bamFile = pysam.AlignmentFile(
-            self.bamFilePath, "r", reference_filename=self.referenceFile
-        )
+        bamFile = pysam.AlignmentFile(self.bamFilePath, "r", reference_filename=self.referenceFile)
 
         # for weirdly sorted bams, we can just go until the eof, as we dont really need bams to be
         # sorted
@@ -106,15 +91,12 @@ class BamScanner(Process):
                 readsPerSec = int(round(readsPerSec, -2))
 
                 # give some info how far we are already through the bam
-                info(
-                    f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
-                )
-                debug(
-                    f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
-                )
+                info(f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second")
+                debug(f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb")
                 gc.collect()
                 if snap is None:
                     snap = tracemalloc.take_snapshot()
+                    display_top(snap)
                 else:
                     snap2 = tracemalloc.take_snapshot()
                     for i in snap2.compare_to(snap, "lineno")[:10]:
@@ -125,13 +107,7 @@ class BamScanner(Process):
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
-            if (
-                read.is_duplicate
-                or read.is_qcfail
-                or read.is_secondary
-                or read.is_unmapped
-                or read.mapping_quality < self.minMQ
-            ):
+            if read.is_duplicate or read.is_qcfail or read.is_secondary or read.is_unmapped or read.mapping_quality < self.minMQ:
                 nLowQualReads += 1
                 continue
             else:
@@ -143,16 +119,12 @@ class BamScanner(Process):
 
                     # if we did get a blacklist and the read actually is within that region, we
                     # discard it and keep a count on how many we discarded
-                    if not self.blackList is None and self.blackList.isWithinRegion(
-                        read
-                    ):
+                    if not self.blackList is None and self.blackList.isWithinRegion(read):
                         nBlackListedReads += 1
 
                     else:
                         # only analyse read in the whitelist region if there is one
-                        if self.whiteList is None or self.whiteList.isWithinRegion(
-                            read
-                        ):
+                        if self.whiteList is None or self.whiteList.isWithinRegion(read):
                             # get all mismatches in this read
                             tmpMisMatches = scanAlignedSegment(read, self.minBQ)
                             # store the mismatches and keep a record how often each was found
@@ -175,9 +147,7 @@ class BamScanner(Process):
 
         # we are done so we update the status as well
 
-        info(
-            f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
-        )
+        info(f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes")
 
         bamFile.close()
 
@@ -322,9 +292,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
     referencePositions = AlignedSegment.get_reference_positions(full_length=True)
 
     # loop through the read
-    for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
-        with_seq=True, matches_only=True
-    ):
+    for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(with_seq=True, matches_only=True):
 
         # if it is lower case it symbolises a mismatch
         if seq.islower():
@@ -340,9 +308,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
 
             # if everything is right, we get the trinucl context of the mismatch in the reference
             # and the query
-            altContext = AlignedSegment.query_alignment_sequence[
-                readPos - 1 : readPos + 2
-            ]
+            altContext = AlignedSegment.query_alignment_sequence[readPos - 1 : readPos + 2]
             refContext = alignedRefSequence[templatePos - 1 : templatePos + 2]
 
             # if either of those contexts is not the full 3 nucleotides, we will skip to the next
@@ -355,10 +321,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             refIndex = readPos + AlignedSegment.query_alignment_start
             # we want an increment of 1 from the position left to middle and one more again for
             # the position to the right
-            if (
-                referencePositions[refIndex - 1] != referencePositions[refIndex] - 1
-                or referencePositions[refIndex + 1] != referencePositions[refIndex] + 1
-            ):
+            if referencePositions[refIndex - 1] != referencePositions[refIndex] - 1 or referencePositions[refIndex + 1] != referencePositions[refIndex] + 1:
                 continue
 
             # now that we have a proper context defined we can go about and check what type of variant this
@@ -381,10 +344,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # however we would get the last position of a 3bp mismatch as a dinucleotide change,
             # which we do not want so we also check if there are more than 2 variants within 4
             # positions
-            if (
-                countLowerCase(alignedRefSequence[templatePos - 2 : templatePos + 2])
-                > 2
-            ):
+            if countLowerCase(alignedRefSequence[templatePos - 2 : templatePos + 2]) > 2:
                 continue
 
             # that would leave us with only single or dinucleotide variants which are shifted to
@@ -393,13 +353,7 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # ref: ccG     ref: CcG
             # which we can easily convert to the classes that we want which are the C>T changes in
             # the dinucleotide context CC,CT,TC because those are specific for melanoma
-            mut = (
-                AlignedSegment.reference_name,
-                contigPos,
-                refContext,
-                altContext,
-                misMatchClass,
-            )
+            mut = (AlignedSegment.reference_name, contigPos, refContext, altContext, misMatchClass)
 
             # just so we can check what kind of variants we actually put into this we can print
             # the contexts for easy readability (this does not put the context at the same

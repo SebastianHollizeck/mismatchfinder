@@ -1,3 +1,6 @@
+import linecache
+import resource
+import tracemalloc
 from itertools import product
 from logging import debug
 
@@ -158,3 +161,41 @@ def convertToDBSTable(countDict):
     debug(f"Finished with DBS")
     res = array(res)
     return res
+
+
+# with this function we limit the available memory for the process to 2Gb, which should make it so
+# the garbage collection is stricter. THis is a requirement on high ram machines to not overload
+# the system with multiple processes
+def limitMemory():
+    soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+    debug(f"Found resource limits: (soft={soft},hard={hard}) ")
+    debug(f"Setting resource limits to soft: 2 and hard: {hard}")
+    resource.setrlimit(resource.RLIMIT_AS, (2048, 4096))
+
+
+def display_top(snapshot, key_type="lineno", limit=10):
+    snapshot = snapshot.filter_traces(
+        (
+            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
+            tracemalloc.Filter(False, "<unknown>"),
+        )
+    )
+    top_stats = snapshot.statistics(key_type)
+
+    debug("Top %s lines" % limit)
+    for index, stat in enumerate(top_stats[:limit], 1):
+        frame = stat.traceback[0]
+        debug(
+            "#%s: %s:%s: %.1f KiB"
+            % (index, frame.filename, frame.lineno, stat.size / 1024)
+        )
+        line = linecache.getline(frame.filename, frame.lineno).strip()
+        if line:
+            debug("    %s" % line)
+
+    other = top_stats[limit:]
+    if other:
+        size = sum(stat.size for stat in other)
+        debug("%s other: %.1f KiB" % (len(other), size / 1024))
+    total = sum(stat.size for stat in top_stats)
+    debug("Total allocated size: %.1f KiB" % (total / 1024))
