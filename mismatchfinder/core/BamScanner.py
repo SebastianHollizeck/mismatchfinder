@@ -12,6 +12,7 @@ from mismatchfinder.utils.Misc import countLowerCase
 
 # from memory_profiler import profile
 import tracemalloc
+import gc
 
 #
 # basicConfig(level=DEBUG, format="(%(threadName)-9s) %(message)s")
@@ -169,7 +170,8 @@ class BamScanner(Process):
                             nAlignedBases += read.query_alignment_length
                         else:
                             nNonWhiteListed += 1
-
+            # it seems we need to help the garbage collector from time to time
+            gc.collect()
         # we are done so we update the status as well
 
         info(
@@ -251,7 +253,6 @@ class BamScanner(Process):
         # first get all possible sites
         mutCands = self.getMutationSites()
 
-        debug(f"Size of the final mutCands: {getsizeof(mutCands)/1024/1024:.2f} Mb")
         # filter out germline mismatches
         mutCands.checkGermlineStatus(self.germObj)
 
