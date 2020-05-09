@@ -10,7 +10,8 @@ from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.utils.Misc import countLowerCase
 
 
-from memory_profiler import profile
+# from memory_profiler import profile
+import tracemalloc
 
 #
 # basicConfig(level=DEBUG, format="(%(threadName)-9s) %(message)s")
@@ -59,12 +60,13 @@ class BamScanner(Process):
     # qualThreshold is for the base quality
     # bedObj is to discard reads mapping to those blacklisted areas in the bed
     # minMQ directly ignores reads which have a mappingquality lower
-    @profile
+    # @profile
     def getMutationSites(self):
 
         # state your purpose ;)
         info("Checking reads for mismatches")
-
+        tracemalloc.start()
+        snap = None
         # store the found sites of mutations and how often they occured
         mutSites = {}
 
@@ -85,13 +87,12 @@ class BamScanner(Process):
 
         # we work directly on the bam without iterator creation
         bamFile = pysam.AlignmentFile(
-            self.bamFilePath,
-            "r",
-            require_index=True,
-            reference_filename=self.referenceFile,
+            self.bamFilePath, "r", reference_filename=self.referenceFile
         )
 
-        for read in bamFile:
+        # for weirdly sorted bams, we can just go until the eof, as we dont really need bams to be
+        # sorted
+        for read in bamFile.fetch(until_eof=True):
             nReads += 1
             # report every 100 reads
             if nReads % 1000000 == 0:
@@ -110,6 +111,13 @@ class BamScanner(Process):
                 debug(
                     f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
                 )
+                if snap is None:
+                    snap = tracemalloc.take_snapshot()
+                else:
+                    snap2 = tracemalloc.take_snapshot()
+                    for i in snap2.compare_to(snap, "lineno")[:10]:
+                        debug(i)
+
                 if nReads >= 3000000:
                     exit()
 
@@ -233,7 +241,7 @@ class BamScanner(Process):
             bam=self.bamFilePath.name,
         )
 
-    @profile
+    # @profile
     def run(self):
 
         info(f"Starting scan of {self.bamFilePath.name}")

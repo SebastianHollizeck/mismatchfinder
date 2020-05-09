@@ -18,7 +18,7 @@ from memory_profiler import profile
 
 
 # This will run everything.
-@profile
+# @profile
 def main():
 
     # start with parameter Parsing
