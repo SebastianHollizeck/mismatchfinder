@@ -112,6 +112,7 @@ class BamScanner(Process):
                 debug(
                     f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
                 )
+                gc.collect()
                 if snap is None:
                     snap = tracemalloc.take_snapshot()
                 else:
@@ -171,7 +172,7 @@ class BamScanner(Process):
                         else:
                             nNonWhiteListed += 1
             # it seems we need to help the garbage collector from time to time
-            gc.collect()
+
         # we are done so we update the status as well
 
         info(
