@@ -24,16 +24,7 @@ def buildNCLSindex(sites):
     return index
 
 
-complement = {
-    "A": "T",
-    "C": "G",
-    "G": "C",
-    "T": "A",
-    "a": "t",
-    "c": "g",
-    "g": "c",
-    "t": "a",
-}
+complement = {"A": "T", "C": "G", "G": "C", "T": "A", "a": "t", "c": "g", "g": "c", "t": "a"}
 
 
 def reverseComplement(dna):
@@ -174,21 +165,13 @@ def limitMemory():
 
 
 def display_top(snapshot, key_type="lineno", limit=10):
-    snapshot = snapshot.filter_traces(
-        (
-            tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
-            tracemalloc.Filter(False, "<unknown>"),
-        )
-    )
+    snapshot = snapshot.filter_traces((tracemalloc.Filter(False, "<frozen importlib._bootstrap>"), tracemalloc.Filter(False, "<unknown>")))
     top_stats = snapshot.statistics(key_type)
 
     debug("Top %s lines" % limit)
     for index, stat in enumerate(top_stats[:limit], 1):
         frame = stat.traceback[0]
-        debug(
-            "#%s: %s:%s: %.1f KiB"
-            % (index, frame.filename, frame.lineno, stat.size / 1024)
-        )
+        debug("#%s: %s:%s: %.1f MB" % (index, frame.filename, frame.lineno, stat.size / 1024 / 1024))
         line = linecache.getline(frame.filename, frame.lineno).strip()
         if line:
             debug("    %s" % line)
@@ -196,6 +179,6 @@ def display_top(snapshot, key_type="lineno", limit=10):
     other = top_stats[limit:]
     if other:
         size = sum(stat.size for stat in other)
-        debug("%s other: %.1f KiB" % (len(other), size / 1024))
+        debug("%s other: %.1f MB" % (len(other), size / 1024 / 1024))
     total = sum(stat.size for stat in top_stats)
-    debug("Total allocated size: %.1f KiB" % (total / 1024))
+    debug("Total allocated size: %.1f MB" % (total / 1024 / 1024))

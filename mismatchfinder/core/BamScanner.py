@@ -92,18 +92,9 @@ class BamScanner(Process):
 
                 # give some info how far we are already through the bam
                 info(f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second")
-                debug(f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb")
-                gc.collect()
-                if snap is None:
-                    snap = tracemalloc.take_snapshot()
-                    display_top(snap)
-                else:
-                    snap2 = tracemalloc.take_snapshot()
-                    for i in snap2.compare_to(snap, "lineno")[:10]:
-                        debug(i)
 
-                if nReads >= 3000000:
-                    exit()
+                snap = tracemalloc.take_snapshot()
+                display_top(snap)
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
