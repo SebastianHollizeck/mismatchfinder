@@ -41,6 +41,14 @@ class BamScanner(Process):
 
         self.outFileRoot = outFileRoot
 
+        # some caching variables to reduce memory usage
+        self.refContexts = {}
+        self.invRefContexts = {}
+        self.altContexts = {}
+        self.invAltContexts = {}
+        self.lastRefId = 0
+        self.lastAltId = 0
+
         # basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
 
     # this function gets all sites of mismatches from any mapped read in a bam
@@ -93,8 +101,8 @@ class BamScanner(Process):
                 # give some info how far we are already through the bam
                 info(f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second")
 
-                snap = tracemalloc.take_snapshot()
-                display_top(snap)
+                # snap = tracemalloc.take_snapshot()
+                # display_top(snap)
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
@@ -117,7 +125,7 @@ class BamScanner(Process):
                         # only analyse read in the whitelist region if there is one
                         if self.whiteList is None or self.whiteList.isWithinRegion(read):
                             # get all mismatches in this read
-                            tmpMisMatches = scanAlignedSegment(read, self.minBQ)
+                            tmpMisMatches = self.scanAlignedSegment(read, self.minBQ)
                             # store the mismatches and keep a record how often each was found
                             for mm in tmpMisMatches:
                                 if mm in mutSites:
@@ -203,6 +211,12 @@ class BamScanner(Process):
             nMisMatches=nMisMatches,
             nAlignedBases=nAlignedBases,
             bam=self.bamFilePath.name,
+            refIds=self.invRefContexts,
+            altIds=self.invAltContexts,
+            invRefIds=self.refContexts,
+            invAltIds=self.altContexts,
+            lastRefId=self.lastRefId,
+            lastAltId=self.lastAltId,
         )
 
     # @profile
@@ -250,6 +264,126 @@ class BamScanner(Process):
         self.semaphore.release()
         info(f"Finished scan of {self.bamFilePath.name}")
 
+    # read through one read and find all mismatches and their contexts
+    # can visualize the contexts on the reads
+    def scanAlignedSegment(self, AlignedSegment, qualThreshold=21, vis=False):
+
+        # this is where we will store the sites we find in this read
+        mutations = []
+
+        # we do this here, so we only do it once instead of in the loop
+        alignedRefSequence = AlignedSegment.get_reference_sequence()
+        referencePositions = AlignedSegment.get_reference_positions(full_length=True)
+
+        # loop through the read
+        for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(with_seq=True, matches_only=True):
+
+            # if it is lower case it symbolises a mismatch
+            if seq.islower():
+                # offset the soft cliping at the beginning
+                readPos = readPos - AlignedSegment.query_alignment_start
+                # offset the reference location
+                templatePos = contigPos - AlignedSegment.reference_start
+
+                # we really only want high quality mismatches
+                qual = AlignedSegment.query_qualities[readPos]
+                if qual < qualThreshold:
+                    continue
+
+                # if everything is right, we get the trinucl context of the mismatch in the reference
+                # and the query
+                altContext = AlignedSegment.query_alignment_sequence[readPos - 1 : readPos + 2]
+                refContext = alignedRefSequence[templatePos - 1 : templatePos + 2]
+
+                # if either of those contexts is not the full 3 nucleotides, we will skip to the next
+                if len(altContext) != 3 or len(refContext) != 3:
+                    continue
+
+                # now we check if what we have is actually from a continous stretch, or if there is an
+                # indel hidden within the snp
+                # as we use the full length refpositions list we need to add the softclip positions back
+                refIndex = readPos + AlignedSegment.query_alignment_start
+                # we want an increment of 1 from the position left to middle and one more again for
+                # the position to the right
+                if referencePositions[refIndex - 1] != referencePositions[refIndex] - 1 or referencePositions[refIndex + 1] != referencePositions[refIndex] + 1:
+                    continue
+
+                # now that we have a proper context defined we can go about and check what type of variant this
+
+                # if we have more than 1 lower case char in our context, that means we ae at the
+                # beginning of a multi mismatch region and we should combine the two into a multi
+                # variant thing
+                # so here we just move on to the next position if we find there is a mismatch in the
+                # next position
+                # this will also take care of trinucleotide variants
+                if refContext[2].islower():
+                    continue
+                elif refContext[0].islower():
+                    # this means its a DBS
+                    misMatchClass = 2
+                else:
+                    # and this is a SBS
+                    misMatchClass = 1
+
+                # however we would get the last position of a 3bp mismatch as a dinucleotide change,
+                # which we do not want so we also check if there are more than 2 variants within 4
+                # positions
+                if countLowerCase(alignedRefSequence[templatePos - 2 : templatePos + 2]) > 2:
+                    continue
+
+                # that would leave us with only single or dinucleotide variants which are shifted to
+                # the left e.g.
+                # alt: TTG     alt: CTG
+                # ref: ccG     ref: CcG
+                # which we can easily convert to the classes that we want which are the C>T changes in
+                # the dinucleotide context CC,CT,TC because those are specific for melanoma
+
+                # we also convert the strings to integers, as there are only a set number and we rather
+                # have references than new string object everytime
+
+                if refContext in self.refContexts:
+                    refId = self.refContexts[refContext]
+                else:
+                    self.lastRefId += 1
+                    refId = self.lastRefId
+                    self.refContexts[refContext] = refId
+                    self.invRefContexts[refId] = refContext
+
+                if altContext in self.altContexts:
+                    altId = self.altContexts[altContext]
+                else:
+                    self.lastAltId += 1
+                    altId = self.lastAltId
+                    self.altContexts[altContext] = altId
+                    self.invAltContexts[altId] = altContext
+
+                mut = (AlignedSegment.reference_name, contigPos, refId, altId, misMatchClass)
+                # debug((id(AlignedSegment.reference_name), contigPos, id(refId), id(altId), id(misMatchClass)))
+
+                # just so we can check what kind of variants we actually put into this we can print
+                # the contexts for easy readability (this does not put the context at the same
+                # position if there are indels in the read but at the position it is taken from)
+                if vis:
+                    # print the query (the actual read) on top
+                    debug(AlignedSegment.query_alignment_sequence)
+                    line = ""
+                    for i in range(0, readPos - 1):
+                        line += " "
+                    line += altContext
+                    debug(line)
+                    # print the template (the reference below)
+                    debug(alignedRefSequence, addTime=False)
+                    line = ""
+                    for i in range(0, readPos - 1):
+                        line += " "
+                    line += refContext
+                    debug(line)
+
+                # add to the found mutations now that everything is sorted out
+                mutations.append(mut)
+
+        return mutations
+
 
 # this is a simple check if a MDstring contains any mismatches
 def hasMisMatches(read):
@@ -271,104 +405,5 @@ def hasMisMatches(read):
         return True
 
 
-# read through one read and find all mismatches and their contexts
-# can visualize the contexts on the reads
-def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
-
-    # this is where we will store the sites we find in this read
-    mutations = []
-
-    # we do this here, so we only do it once instead of in the loop
-    alignedRefSequence = AlignedSegment.get_reference_sequence()
-    referencePositions = AlignedSegment.get_reference_positions(full_length=True)
-
-    # loop through the read
-    for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(with_seq=True, matches_only=True):
-
-        # if it is lower case it symbolises a mismatch
-        if seq.islower():
-            # offset the soft cliping at the beginning
-            readPos = readPos - AlignedSegment.query_alignment_start
-            # offset the reference location
-            templatePos = contigPos - AlignedSegment.reference_start
-
-            # we really only want high quality mismatches
-            qual = AlignedSegment.query_qualities[readPos]
-            if qual < qualThreshold:
-                continue
-
-            # if everything is right, we get the trinucl context of the mismatch in the reference
-            # and the query
-            altContext = AlignedSegment.query_alignment_sequence[readPos - 1 : readPos + 2]
-            refContext = alignedRefSequence[templatePos - 1 : templatePos + 2]
-
-            # if either of those contexts is not the full 3 nucleotides, we will skip to the next
-            if len(altContext) != 3 or len(refContext) != 3:
-                continue
-
-            # now we check if what we have is actually from a continous stretch, or if there is an
-            # indel hidden within the snp
-            # as we use the full length refpositions list we need to add the softclip positions back
-            refIndex = readPos + AlignedSegment.query_alignment_start
-            # we want an increment of 1 from the position left to middle and one more again for
-            # the position to the right
-            if referencePositions[refIndex - 1] != referencePositions[refIndex] - 1 or referencePositions[refIndex + 1] != referencePositions[refIndex] + 1:
-                continue
-
-            # now that we have a proper context defined we can go about and check what type of variant this
-
-            # if we have more than 1 lower case char in our context, that means we ae at the
-            # beginning of a multi mismatch region and we should combine the two into a multi
-            # variant thing
-            # so here we just move on to the next position if we find there is a mismatch in the
-            # next position
-            # this will also take care of trinucleotide variants
-            if refContext[2].islower():
-                continue
-            elif refContext[0].islower():
-                # this means its a DBS
-                misMatchClass = 2
-            else:
-                # and this is a SBS
-                misMatchClass = 1
-
-            # however we would get the last position of a 3bp mismatch as a dinucleotide change,
-            # which we do not want so we also check if there are more than 2 variants within 4
-            # positions
-            if countLowerCase(alignedRefSequence[templatePos - 2 : templatePos + 2]) > 2:
-                continue
-
-            # that would leave us with only single or dinucleotide variants which are shifted to
-            # the left e.g.
-            # alt: TTG     alt: CTG
-            # ref: ccG     ref: CcG
-            # which we can easily convert to the classes that we want which are the C>T changes in
-            # the dinucleotide context CC,CT,TC because those are specific for melanoma
-            mut = (AlignedSegment.reference_name, contigPos, refContext, altContext, misMatchClass)
-
-            # just so we can check what kind of variants we actually put into this we can print
-            # the contexts for easy readability (this does not put the context at the same
-            # position if there are indels in the read but at the position it is taken from)
-            if vis:
-                # print the query (the actual read) on top
-                debug(AlignedSegment.query_alignment_sequence)
-                line = ""
-                for i in range(0, readPos - 1):
-                    line += " "
-                line += altContext
-                debug(line)
-                # print the template (the reference below)
-                debug(alignedRefSequence, addTime=False)
-                line = ""
-                for i in range(0, readPos - 1):
-                    line += " "
-                line += refContext
-                debug(line)
-
-            # add to the found mutations now that everything is sorted out
-            mutations.append(mut)
-
-    return mutations
-
-    def cleanUp(self):
-        """This is meant to destroy the object, such that the memory requirements are basically null"""
+def cleanUp(self):
+    """This is meant to destroy the object, such that the memory requirements are basically null"""

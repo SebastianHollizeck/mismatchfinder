@@ -4,13 +4,7 @@ from logging import debug, info
 from pandas import DataFrame, concat
 
 from mismatchfinder.core.GermlineObject import ChromosomeCache
-from mismatchfinder.utils.Misc import (
-    DBSrefs,
-    convertToDBSTable,
-    convertToSBSTable,
-    countLowerCase,
-    reverseComplement,
-)
+from mismatchfinder.utils.Misc import DBSrefs, convertToDBSTable, convertToSBSTable, countLowerCase, reverseComplement
 
 
 def convertToPandasDataFrame(resultQueue):
@@ -42,6 +36,12 @@ class MismatchCandidates(object):
         nDiscordantReads,
         nAlignedBases,
         bam,
+        refIds,
+        altIds,
+        invRefIds,
+        invAltIds,
+        lastRefId,
+        lastAltId,
     ):
 
         super(MismatchCandidates, self).__init__(),
@@ -56,6 +56,14 @@ class MismatchCandidates(object):
         self.nSites = len(self.mutSites)
         self.nDiscordantReads = nDiscordantReads
         self.nAlignedBases = nAlignedBases
+
+        # caching things
+        self.refIds = refIds
+        self.altIds = altIds
+        self.invRefIds = invRefIds
+        self.invAltIds = invAltIds
+        self.lastRefId = max(self.refIds)
+        self.lastAltId = max(self.altIds)
 
     def convertToPandasDataFrameRow(self):
         fields = deepcopy(self.__dict__)
@@ -79,9 +87,7 @@ class MismatchCandidates(object):
             fields.pop("DBScontexts")
         except KeyError:
             # this is acceptable because they are actually removed for pickling the results
-            debug(
-                "Some fields were already deleted due to cleanup, this is not a problem"
-            )
+            debug("Some fields were already deleted due to cleanup, this is not a problem")
 
         # use the rest to make a dataframe
         df = DataFrame.from_records([fields], index=[self.bam])
@@ -102,6 +108,10 @@ class MismatchCandidates(object):
         resDBS = {}
 
         for (chr, pos, refContext, altContext, misMatchClass) in self.mutSites:
+
+            # decode the contexts
+            refContext = self.refIds[refContext]
+            altContext = self.altIds[altContext]
             # this means we have only one mismatch
             if misMatchClass == 1:
                 # we need to convert the mismatch into the right strand (reverse complement, if the
@@ -130,9 +140,7 @@ class MismatchCandidates(object):
                     altContext = reverseComplement(altContext)
 
                 if not refContext in DBSrefs:
-                    debug(
-                        f"Contexts ref:{reverseComplement(refContext)} alt:{reverseComplement(altContext)} not found in DBS context database... skipping"
-                    )
+                    debug(f"Contexts ref:{reverseComplement(refContext)} alt:{reverseComplement(altContext)} not found in DBS context database... skipping")
                     continue
 
                 key = refContext + ">" + altContext
@@ -171,6 +179,13 @@ class MismatchCandidates(object):
         # otherwise we have to refresh the cache with every change of the chromosome
         for (chr, pos, refContext, altContext, misMatchClass) in sorted(self.mutSites):
 
+            # get the count from the dict before we change anything
+            occurrences = self.mutSites[(chr, pos, refContext, altContext, misMatchClass)]
+
+            # decode ids
+            refContext = self.refIds[refContext]
+            altContext = self.altIds[altContext]
+
             # first we need to cache the data from the chromosome that the site is on
             if cache is None or cache.chr != chr:
                 cache = ChromosomeCache(germlineObj, chr)
@@ -181,9 +196,6 @@ class MismatchCandidates(object):
                     if discard:
                         continue
 
-            occurrences = self.mutSites[
-                (chr, pos, refContext, altContext, misMatchClass)
-            ]
             # get the index of all germline variants with a trinucleotide at this position
             varIdxs = cache.findOverlaps(pos)
 
@@ -215,9 +227,7 @@ class MismatchCandidates(object):
                     if altContext[offset].upper() == alt:
                         # this means this is a germline variant and we just make it an upper case
                         # to keep the variant but show its not somatic
-                        refContext = (
-                            f"{refContext[:offset]}{ref}{refContext[offset+1:]}"
-                        )
+                        refContext = f"{refContext[:offset]}{ref}{refContext[offset+1:]}"
                         # we can also stop iterating through the alts, because only one ref and alt
                         # combination will match with the observed variant
                         break
@@ -230,7 +240,24 @@ class MismatchCandidates(object):
                 if refContext[1].isupper():
                     nShiftFail += 1
 
-            res[(chr, pos, refContext, altContext, misMatchClass)] = occurrences
+            # encode the contetxts
+            if refContext in self.invRefIds:
+                refId = self.invRefIds[refContext]
+            else:
+                self.lastRefId += 1
+                refId = self.lastRefId
+                self.invRefIds[refContext] = refId
+                self.refIds[refId] = refContext
+
+            if altContext in self.invRefIds:
+                altId = self.invRefIds[altContext]
+            else:
+                self.lastAltId += 1
+                altId = self.lastAltId
+                self.invAltIds[altContext] = altId
+                self.altIds[altId] = altContext
+
+            res[(chr, pos, refId, altId, misMatchClass)] = occurrences
             # we want to count the double mismatches as double the single mismatches
             # at least at the moment
             self.nSomaticMisMatches += misMatchClass * occurrences
