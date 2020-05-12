@@ -2,7 +2,7 @@ from logging import debug, error
 
 import matplotlib
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 from numpy import array, eye, float64, hstack, matmul, ones, sum
 from pandas import DataFrame, read_csv
 from quadprog import solve_qp
@@ -110,25 +110,25 @@ class Signature(object):
         )
         return df
 
-
-def plotSignatures(weights):
-
-    items = []
-    sigNames = weights.columns
-    for bam, r in weights.iterrows():
-        for i, sig in enumerate(weights.columns):
-            items.append({"bam": bam, "signature": sigNames[i], "weight": r[sig]})
-
-    df = DataFrame(items)
-
-    print(df)
-
-    # Create plots and output to file
-    sns.set_style("whitegrid")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    sns.boxplot(x="signature", y="weight", data=df, ax=ax1)
-    sns.boxplot(x="signature", y="weight", data=df, ax=ax2)
-    plt.suptitle("testplot", y=1)
-
-    plt.tight_layout()
-    plt.savefig("test.png")
+#
+# def plotSignatures(weights):
+#
+#     items = []
+#     sigNames = weights.columns
+#     for bam, r in weights.iterrows():
+#         for i, sig in enumerate(weights.columns):
+#             items.append({"bam": bam, "signature": sigNames[i], "weight": r[sig]})
+#
+#     df = DataFrame(items)
+#
+#     print(df)
+#
+#     # Create plots and output to file
+#     sns.set_style("whitegrid")
+#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+#     sns.boxplot(x="signature", y="weight", data=df, ax=ax1)
+#     sns.boxplot(x="signature", y="weight", data=df, ax=ax2)
+#     plt.suptitle("testplot", y=1)
+#
+#     plt.tight_layout()
+#     plt.savefig("test.png")
