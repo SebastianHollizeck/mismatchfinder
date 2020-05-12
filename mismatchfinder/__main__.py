@@ -100,6 +100,7 @@ def main():
     SBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_SBSweights.tsv"
     )
+    debug(f"Writing SBS signature weights to {SBSweightsFile}")
     SBSweights.to_csv(SBSweightsFile, sep="\t")
 
     DBSsig = Signature.loadDBSSignaturesFromFile()
@@ -108,6 +109,7 @@ def main():
     DBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_DBSweights.tsv"
     )
+    debug(f"Writing DBS signature weights to {DBSweightsFile}")
     DBSweights.to_csv(DBSweightsFile, sep="\t")
 
     info("FINISHED")

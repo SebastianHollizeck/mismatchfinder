@@ -1,4 +1,4 @@
-from logging import error
+from logging import debug, error
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -56,7 +56,7 @@ class Signature(object):
 
         # create the input vector of observed counts
         D = matmul(normalisedCounts, self.data)
-
+        debug("Estimating contributions of signatures to counts")
         weights = array([solve_qp(self.G, d, self.C, self.b, meq=1)[0] for d in D])
 
         # floats are a bit wonky sometimes, so we check that everything is still > 0 and renormalise
@@ -67,11 +67,13 @@ class Signature(object):
 
     @classmethod
     def loadSBSSignaturesFromFile(cls, file=None):
-
         if file is None:
+            debug("Using default SBS signatures")
             with pkg_resources.path(ext, "sigProfiler_SBS_signatures.csv") as path:
                 file = path
 
+
+        debug(f"Loading reference signature file {file}")
         with open(file, "r") as sigFH:
 
             prelimSigs = read_csv(sigFH, header=0, sep=",", index_col=0)
@@ -83,9 +85,11 @@ class Signature(object):
     def loadDBSSignaturesFromFile(cls, file=None):
 
         if file is None:
+            debug("Using default DBS signatures")
             with pkg_resources.path(ext, "sigProfiler_DBS_signatures.csv") as path:
                 file = path
 
+        debug(f"Loading reference signature file {file}")
         with open(file, "r") as sigFH:
 
             prelimSigs = read_csv(sigFH, header=0, sep=",", index_col=0)
@@ -95,6 +99,7 @@ class Signature(object):
 
     def analyseCountsFile(self, file):
 
+        debug(f"Reading in context counts file {file}")
         with open(file, mode="r") as countFH:
             countsTable = read_csv(countFH, header=0, sep="\t", index_col=0)
 
