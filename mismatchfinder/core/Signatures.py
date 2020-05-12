@@ -14,8 +14,8 @@ matplotlib.use("Agg")
 try:
     import importlib.resources as pkg_resources
 except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources as pkg_resource
+    debug("falling back to backported importlib module")
+    import importlib_resources as pkg_resources
 
 
 class Signature(object):
