@@ -2,15 +2,14 @@
 
 
 from logging import debug, info
-from multiprocessing import Semaphore, SimpleQueue, Lock
-from time import sleep
+from multiprocessing import Lock, Semaphore, SimpleQueue
 
 from .core.BamScanner import BamScanner
 from .core.BedObject import BedObject
 from .core.GermlineObject import GermlineObject
-from .results.Results import convertToPandasDataFrame
+from .core.Signatures import Signature
 from .utils.Input import InputParser
-from .utils.Output import createOutputFiles, writeStatsFile
+from .utils.Output import createOutputFiles
 
 # This will run everything.
 
@@ -94,14 +93,23 @@ def main():
     for p in processes:
         p.join()
 
-    # statsTable = convertToPandasDataFrame(tumourResults)
-    # writeStatsFile(statsTable, outFileRoot=inputs.outFileRoot)
+    # read the files of the parallel processed back in and analyse the results
+    SBSsig = Signature.loadSBSSignaturesFromFile()
+    SBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_SBScontexts.tsv")
+    SBSweights = SBSsig.analyseCountsFile(SBSFile)
+    SBSweightsFile = inputs.outFileRoot.parent / (
+        inputs.outFileRoot.name + "_SBSweights.tsv"
+    )
+    SBSweights.to_csv(SBSweightsFile, sep="\t")
 
-    # output results as just the data or even with plot
-    # plotStats(
-    #     convertToPandasDataFrame(tumourResults),
-    #     normalDf=convertToPandasDataFrame(normalResults),
-    # )
+    DBSsig = Signature.loadDBSSignaturesFromFile()
+    DBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_DBScontexts.tsv")
+    DBSweights = DBSsig.analyseCountsFile(DBSFile)
+    DBSweightsFile = inputs.outFileRoot.parent / (
+        inputs.outFileRoot.name + "_DBSweights.tsv"
+    )
+    DBSweights.to_csv(DBSweightsFile, sep="\t")
+
     info("FINISHED")
 
 

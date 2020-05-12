@@ -81,10 +81,7 @@ class BamScanner(Process):
 
         # we work directly on the bam without iterator creation
         bamFile = pysam.AlignmentFile(
-            self.bamFilePath,
-            "r",
-            require_index=True,
-            reference_filename=self.referenceFile,
+            self.bamFilePath, "r", reference_filename=self.referenceFile
         )
 
         for read in bamFile:
@@ -102,9 +99,6 @@ class BamScanner(Process):
                 # give some info how far we are already through the bam
                 info(
                     f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
-                )
-                debug(
-                    f"Memory required by mutSites: {getsizeof(mutSites)/1024/1024:.2f} Mb"
                 )
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we

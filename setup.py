@@ -20,7 +20,15 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/sebastianhollizeck/mismatchfinder",
     packages=find_packages(),
-    install_requires=["numpy", "ncls", "pysam", "matplotlib"],
+    install_requires=[
+        "numpy",
+        "ncls",
+        "pysam",
+        "matplotlib",
+        "zarr",
+        "pandas",
+        "quadprog",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Development Status :: 3 - Alpha",
@@ -30,4 +38,5 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     entry_points={"console_scripts": ["mismatchfinder=mismatchfinder.__main__:main"]},
+    package_data={"mismatchfinder": ["ext/*.csv"]},
 )
