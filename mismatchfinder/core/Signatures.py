@@ -44,7 +44,8 @@ class Signature(object):
         )
         self.b = array([1.0] + [0.0] * self.nSigs, dtype=float64)
 
-    def whichSignatures(self, counts):
+    def whichSignaturesQP(self, counts):
+        """This method is based on the math from the paper: 'Decomposition of mutational context signatures using quadratic programming methods'"""
 
         if counts.shape[1] != self.nTypes:
             error(
@@ -103,7 +104,7 @@ class Signature(object):
         with open(file, mode="r") as countFH:
             countsTable = read_csv(countFH, header=0, sep="\t", index_col=0)
 
-        sigWeights = self.whichSignatures(countsTable.values)
+        sigWeights = self.whichSignaturesQP(countsTable.values)
 
         df = DataFrame(
             data=sigWeights, index=countsTable.index, columns=self.df.columns
