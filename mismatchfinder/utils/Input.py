@@ -134,7 +134,7 @@ class InputParser(object):
             # found? then again we dont want to just do half an analysis.
             bam = Path(bam)
             if not bam.is_file():
-                raise Exception("Could not find bam file: " + bam)
+                raise Exception(f"Could not find bam file: {bam}")
             else:
                 # this will be done multiple times, so you can combine bams and crams in the
                 # analysis without any issues
@@ -151,7 +151,7 @@ class InputParser(object):
             blFile = Path(params.blackList)
             if not blFile.is_file():
                 raise Exception(
-                    "Could not find black list bed file: " + params.blackList
+                    f"Could not find black list bed file: {params.blackList}"
                 )
             else:
                 self.blackListFile = blFile
@@ -163,7 +163,7 @@ class InputParser(object):
             wlFile = Path(params.whiteList)
             if not wlFile.is_file():
                 raise Exception(
-                    "Could not find whitelist bed file: " + params.whiteList
+                    f"Could not find whitelist bed file: {params.whiteList}"
                 )
             else:
                 self.whiteListFile = wlFile
@@ -176,7 +176,7 @@ class InputParser(object):
             glFile = Path(params.germline)
             if not glFile.is_dir():
                 raise Exception(
-                    "Could not find germline zarr folder: " + params.germline
+                    f"Could not find germline zarr folder: {params.germline}"
                 )
             else:
                 self.germlineFile = glFile
