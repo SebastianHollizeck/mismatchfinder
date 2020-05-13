@@ -79,6 +79,14 @@ class InputParser(object):
         )
 
         parser.add_argument(
+            "-m",
+            "--method",
+            help="The method to use to deconstruct signatures QP: Quadratic Programming ILM: Iterative Linear",
+            choices=["QP", "ILM"],
+            default="info",
+        )
+
+        parser.add_argument(
             "-n",
             "--normals",
             help="the normal bams that should be used for plots",
@@ -211,3 +219,4 @@ class InputParser(object):
         # dont need to check anything here, because the parser already does everything for us
         self.verbosity = params.verbosity.upper()
         self.threads = params.threads
+        self.method = params.method
