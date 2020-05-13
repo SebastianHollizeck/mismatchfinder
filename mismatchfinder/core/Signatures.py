@@ -1,9 +1,29 @@
 from logging import debug, error
 
 import matplotlib.pyplot as plt
-from numpy import array, eye, float64, hstack, matmul, ones, sum
+from dask.array.wrap import w
+from numpy import (
+    apply_along_axis,
+    argmin,
+    array,
+    eye,
+    float64,
+    full,
+    hstack,
+    inf,
+    isinf,
+    matmul,
+    nonzero,
+    ones,
+    sum,
+    zeros,
+    sqrt,
+    copy,
+    isnan,
+)
 from pandas import DataFrame, read_csv
 from quadprog import solve_qp
+from scipy.optimize import minimize_scalar
 
 from mismatchfinder import ext
 
@@ -15,7 +35,6 @@ except ImportError:
 
 
 class Signature(object):
-
     def __init__(self, pandas, type):
         """
         Note: dont use this constructor, but instead use the class methods 'loadSignaturesFromFile'
@@ -60,7 +79,7 @@ class Signature(object):
 
         if counts.shape[1] != self.nTypes:
             error(
-                "The counts provided do not match the loaded signature, you might need to load a different signature"
+                f"The counts provided ({counts.shape}) do not match the loaded signature ({self.df.shape}), you might need to load a different signature"
             )
             return None
 
@@ -103,16 +122,247 @@ class Signature(object):
             # and here we just discard them
             return Signature(prelimSigs, type)
 
-
-    def analyseCountsFile(self, file):
+    def analyseCountsFile(self, file, method="QP"):
 
         debug(f"Reading in context counts file {file}")
         with open(file, mode="r") as countFH:
             countsTable = read_csv(countFH, header=0, sep="\t", index_col=0)
+            # check if we have issues
+            if countsTable.isna().values.any():
+                error(f"File {file} could not be parsed")
+                raise Exception(f"File {file} could not be parsed")
 
-        sigWeights = self.whichSignaturesQP(countsTable.values)
+        if method == "QP":
+            sigWeights = self.whichSignaturesQP(countsTable.values)
+        elif method == "ILM":
+            sigWeights = apply_along_axis(
+                self.whichSignaturesILM, axis=1, arr=countsTable.values
+            )
+        else:
+            error(f"Signature deconstruction method {method} not implemented")
+            raise Exception(f"Signature deconstruction method {method} not implemented")
 
         df = DataFrame(
             data=sigWeights, index=countsTable.index, columns=self.df.columns
         )
         return df
+
+    def whichSignaturesILM(
+        self, counts, limitSigs=None, errorThreshold=1e-3, limitIterations=1000
+    ):
+
+        if len(counts) != self.nTypes:
+            error(
+                "The counts provided do not match the loaded signature, you might need to load a different signature"
+            )
+            return None
+
+        normalisedCounts = counts / sum(counts)
+
+        # if we didnt get a limit, we just use all of them
+        if limitSigs is None:
+            limitSigs = self.nSigs
+
+        absentSigs = self.calculateAbsentSignatures(normalisedCounts)
+        debug(f"Will ignore these signatures: {absentSigs}")
+        # get only the indexes
+        ignoreIdxs = [a["sigIdx"] for a in absentSigs]
+
+        weights, currError = self.seedWeights(normalisedCounts, ignoreIdxs)
+
+        iteration = 0
+        errorDiff = inf
+        while errorDiff > errorThreshold and iteration < limitIterations:
+            iteration += 1
+            debug(f"Optimisation iteration {iteration}")
+
+            weights, newError = self.updateWeights(
+                counts=normalisedCounts,
+                weights=weights,
+                limitSigs=limitSigs,
+                ignoreSigs=ignoreIdxs,
+            )
+            # see how much we improved upon the last time
+            if not isinf(currError):
+                errorDiff = (currError - newError) / currError
+                debug(f"reduced error by {errorDiff}")
+
+            # update our state to the new weights
+            currError = newError
+
+            # if the error is 0 we might as well stop optimising
+            if currError == 0:
+                debug(f"Found a perfect solution")
+                break
+
+        # normalise the weights
+        weights = weights / sum(weights)
+        ## TODO: put in a filtering?
+        # where(weights < 0.1, weights, 0)
+
+        return weights
+
+    def calculateAbsentSignatures(self, counts):
+
+        # first we want to know which contexts basically never show up in the normalised counts
+        # if all contexts would show equally, we would expect each to have 0.0104 so this means
+        # this signature is occurs 5 times less frequent than the average
+        contextsNotPresent = counts < 0.002
+
+        # this is the place to store signatures we find are absent
+        signaturesAbsent = []
+
+        # we go through all signatures (in the columns of the dataframe)
+        for i in range(self.df.shape[1]):
+            contextFractions = self.df.iloc[:, i]
+            # then look at their fractions affecting this contexts
+            for j in range(len(contextFractions)):
+                cf = contextFractions[j]
+                # if this signature has a peak here
+                if cf > 0.5:
+                    # but the context is not present in the counts
+                    if contextsNotPresent[j]:
+                        # we can safely ignore the signature
+                        signaturesAbsent.append(
+                            {
+                                "sigIdx": i,
+                                "sig": self.df.columns[i],
+                                "contextIdx:": j,
+                                "context": self.df.index[j],
+                                "cf": cf,
+                            }
+                        )
+                    # if this peak happend, we dont need to look at any others anymore for this
+                    # signature
+                    break
+
+        return signaturesAbsent
+
+    def seedWeights(self, counts, ignoreSigs=None):
+        debug(f"Seeding initial weights")
+        # if we dont ignore anything, then we just transform this to an empty list
+        if ignoreSigs is None:
+            ignoreSigs = []
+
+        error = inf
+        weights = []
+        for i in range(self.nSigs):
+            if i not in ignoreSigs:
+                currWeights = zeros(self.nSigs)
+                currWeights[i] = 1
+                currError = self.getError(counts, currWeights)
+                if currError < error:
+                    weights = currWeights
+                    error = currError
+
+        return weights, error
+
+    def getError(self, counts, weights):
+        reconstProf = self.reconstructProfile(weights)
+
+        error = sum(sqrt((counts - reconstProf) ** 2))
+
+        return error
+
+    def reconstructProfile(self, weights):
+        weights = weights / sum(weights)
+
+        return weights.dot(self.data.T)
+
+    def updateWeights(self, counts, weights, limitSigs, ignoreSigs):
+
+        if ignoreSigs is None:
+            ignoreSigs = []
+
+        # see how many signatures are already used in this solution
+        nUsedSigs = len([weight for weight in weights if weight != 0])
+
+        # the error with the current weights
+        currError = self.getError(counts, weights)
+
+        # calculate which weights we are allowed to change
+        # if we still have less signatures used than the limit, then we can play with any of them
+        # as we only add one more signature each iteration
+        if nUsedSigs < limitSigs:
+            availSigs = range(self.nSigs)
+            debug("adding more signatures possible")
+        else:
+            # if we already are at the limit, then we only adjust those which are already used
+            availSigs = nonzero(weights)[0]
+            debug(
+                "we couldnt add any more signatures, so we need to adjust the ones we have"
+            )
+
+        # now we discard those signatures which we already know we can ignore
+        availSigs = [i for i in availSigs if i not in ignoreSigs]
+
+        # create a matrix to store optimisation results
+        v = zeros((self.nSigs, self.nSigs))
+
+        # store new errors per signature
+        newErrors = full(self.nSigs, inf)
+
+        # go through all indices that are available
+        for i in availSigs:
+
+            # for signature i find the weight that minimises the error
+            def minimise(x):
+                mWeights = copy(weights)
+                mWeights[i] += x
+                return self.getError(counts, mWeights)
+
+            # minimise in respect to the weight > 0 and weight < 1
+            errorMinimiser = minimize_scalar(
+                minimise, bounds=(-weights[i], 1), method="bounded"
+            ).x
+            # save the result
+            v[i, i] = errorMinimiser
+            newWeights = weights + v[i]
+
+            # find out how well we did
+            newErrors[i] = self.getError(counts, newWeights)
+
+        # check which of the signatures can be adjusted to minimise the error
+        minNewError = min(newErrors)
+
+        # update the weights if we find a more optimal solution
+        if minNewError < currError:
+            minIdx = argmin(newErrors)
+            weights[minIdx] += v[minIdx, minIdx]
+            currError = minNewError
+        else:
+            debug(f"No new improvement found")
+
+        return weights, currError
+
+
+if __name__ == "__main__":
+
+    from logging import basicConfig
+
+    basicConfig(
+        level="DEBUG",
+        format="%(asctime)s %(levelname)-8s %(processName)-10s  %(message)s",
+    )
+
+    sig = Signature.loadSignaturesFromFile(type="SBS")
+
+    sig.analyseCountsFile(
+        "/Users/hollizecksebastian/Documents/workspace/MisMatchFinder/tests/SBScounts.tsv"
+    )
+    # building artificial counts
+    # mix = zeros(67)
+    # mix[0] = mix[2] = mix[5] = mix[9] = 0.25
+    #
+    # # get the counts how they look like
+    # counts = sig.data.dot(mix)
+    #
+    # print(len(counts))
+    # print(counts)
+    #
+    # # deconstruct
+    # weights = sig.whichSignaturesILM(counts, limitSigs=4)
+    #
+    # error = sum(sqrt((weights - mix) ** 2))
+    # print(error)
+    # print(weights)
