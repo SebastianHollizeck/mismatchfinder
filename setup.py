@@ -28,6 +28,7 @@ setuptools.setup(
         "zarr",
         "pandas",
         "quadprog",
+        "scipy",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
