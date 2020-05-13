@@ -94,7 +94,7 @@ def main():
         p.join()
 
     # read the files of the parallel processed back in and analyse the results
-    SBSsig = Signature.loadSBSSignaturesFromFile()
+    SBSsig = Signature.loadSignaturesFromFile(type="SBS")
     SBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_SBScontexts.tsv")
     SBSweights = SBSsig.analyseCountsFile(SBSFile)
     SBSweightsFile = inputs.outFileRoot.parent / (
@@ -103,7 +103,7 @@ def main():
     debug(f"Writing SBS signature weights to {SBSweightsFile}")
     SBSweights.to_csv(SBSweightsFile, sep="\t")
 
-    DBSsig = Signature.loadDBSSignaturesFromFile()
+    DBSsig = Signature.loadSignaturesFromFile(type="DBS")
     DBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_DBScontexts.tsv")
     DBSweights = DBSsig.analyseCountsFile(DBSFile)
     DBSweightsFile = inputs.outFileRoot.parent / (

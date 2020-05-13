@@ -1,15 +1,11 @@
 from logging import debug, error
 
-import matplotlib
 import matplotlib.pyplot as plt
-# import seaborn as sns
 from numpy import array, eye, float64, hstack, matmul, ones, sum
 from pandas import DataFrame, read_csv
 from quadprog import solve_qp
 
 from mismatchfinder import ext
-
-matplotlib.use("Agg")
 
 try:
     import importlib.resources as pkg_resources
@@ -19,7 +15,17 @@ except ImportError:
 
 
 class Signature(object):
+
     def __init__(self, pandas, type):
+        """
+        Note: dont use this constructor, but instead use the class methods 'loadSignaturesFromFile'
+        to ensure this is initialised the right way.
+        This class stores the signatures and allows the decontruction of counts
+
+        :param pandas the signature dataframe in pandas notations
+        :param type flag to store if this is an SBS or DBS signature
+        """
+
         super(Signature, self).__init__()
 
         self.type = type
@@ -45,7 +51,12 @@ class Signature(object):
         self.b = array([1.0] + [0.0] * self.nSigs, dtype=float64)
 
     def whichSignaturesQP(self, counts):
-        """This method is based on the math from the paper: 'Decomposition of mutational context signatures using quadratic programming methods'"""
+        """
+        Deconstucts the counts for the trinucleotide contexts into the weight of each of the signatures saved in this object
+        This method is based on the math from the paper: 'Decomposition of mutational context signatures using quadratic programming methods'
+
+        :param counts The numpy array of counts with each instance being a row and each context being a column
+        """
 
         if counts.shape[1] != self.nTypes:
             error(
@@ -67,27 +78,21 @@ class Signature(object):
         return weights
 
     @classmethod
-    def loadSBSSignaturesFromFile(cls, file=None):
-        if file is None:
-            debug("Using default SBS signatures")
-            with pkg_resources.path(ext, "sigProfiler_SBS_signatures.csv") as path:
-                file = path
-
-
-        debug(f"Loading reference signature file {file}")
-        with open(file, "r") as sigFH:
-
-            prelimSigs = read_csv(sigFH, header=0, sep=",", index_col=0)
-
-            # and here we just discard them
-            return Signature(prelimSigs, "SBS")
-
-    @classmethod
-    def loadDBSSignaturesFromFile(cls, file=None):
+    def loadSignaturesFromFile(cls, file=None, type="SBS"):
+        """
+        Method to create a signature object from a file.
+        There are some default signatures available for usage if no file is specified
+        :param file the file to create the signatures from (csv with signatures in the columns and the trinucleotides in the rows with header as well as rownames) will load default signatures if no file given
+        :param type sets the type of the signatures and is responsible to decide which decault signatures to load if no file is given (SBS/DBS)
+        """
 
         if file is None:
-            debug("Using default DBS signatures")
-            with pkg_resources.path(ext, "sigProfiler_DBS_signatures.csv") as path:
+            if type != "SBS" and type != "DBS":
+                error(f"No signature associated with default value: {type}")
+                exit(1)
+
+            debug(f"Using default {type} signatures")
+            with pkg_resources.path(ext, f"sigProfiler_{type}_signatures.csv") as path:
                 file = path
 
         debug(f"Loading reference signature file {file}")
@@ -96,7 +101,8 @@ class Signature(object):
             prelimSigs = read_csv(sigFH, header=0, sep=",", index_col=0)
 
             # and here we just discard them
-            return Signature(prelimSigs, "DBS")
+            return Signature(prelimSigs, type)
+
 
     def analyseCountsFile(self, file):
 
@@ -110,26 +116,3 @@ class Signature(object):
             data=sigWeights, index=countsTable.index, columns=self.df.columns
         )
         return df
-
-#
-# def plotSignatures(weights):
-#
-#     items = []
-#     sigNames = weights.columns
-#     for bam, r in weights.iterrows():
-#         for i, sig in enumerate(weights.columns):
-#             items.append({"bam": bam, "signature": sigNames[i], "weight": r[sig]})
-#
-#     df = DataFrame(items)
-#
-#     print(df)
-#
-#     # Create plots and output to file
-#     sns.set_style("whitegrid")
-#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-#     sns.boxplot(x="signature", y="weight", data=df, ax=ax1)
-#     sns.boxplot(x="signature", y="weight", data=df, ax=ax2)
-#     plt.suptitle("testplot", y=1)
-#
-#     plt.tight_layout()
-#     plt.savefig("test.png")
