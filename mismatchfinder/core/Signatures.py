@@ -122,7 +122,7 @@ class Signature(object):
             # and here we just discard them
             return Signature(prelimSigs, type)
 
-    def analyseCountsFile(self, file, method="QP"):
+    def analyseCountsFile(self, file, method="ILM"):
 
         debug(f"Reading in context counts file {file}")
         with open(file, mode="r") as countFH:
