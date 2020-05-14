@@ -55,13 +55,13 @@ class InputParser(object):
             default=1,
         )
 
-        parser.add_argument(
-            "-O",
-            "--outputType",
-            help="the format to output the result",
-            choices=["json", "R"],
-            default="json",
-        )
+        # parser.add_argument(
+        #     "-O",
+        #     "--outputType",
+        #     help="the format to output the result",
+        #     choices=["json", "R"],
+        #     default="json",
+        # )
 
         parser.add_argument(
             "-o",
@@ -86,14 +86,15 @@ class InputParser(object):
             default="ILM",
         )
 
-        parser.add_argument(
-            "-n",
-            "--normals",
-            help="the normal bams that should be used for plots",
-            nargs="+",
-            metavar="BAM",
-            default=[],
-        )
+        # parser.add_argument(
+        #     "-n",
+        #     "--normals",
+        #     help="the normal bams that should be used for plots",
+        #     nargs="+",
+        #     metavar="BAM",
+        #     default=[],
+        # )
+
         params = parser.parse_args()
 
         # set up the logging before we do anything else
