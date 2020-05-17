@@ -137,20 +137,20 @@ class InputParser(object):
 
         # we do the same test for the normals
         self.normals = []
-        for bam in params.normals:
-            debug(f"Checking alignment input file: {bam}")
-            # we might actually waive this exception (maybe with an option) if just one file is not
-            # found? then again we dont want to just do half an analysis.
-            bam = Path(bam)
-            if not bam.is_file():
-                raise Exception(f"Could not find bam file: {bam}")
-            else:
-                # this will be done multiple times, so you can combine bams and crams in the
-                # analysis without any issues
-                with AlignmentFile(bam, "r") as tFile:
-                    if tFile.is_cram and self.referenceFile is None:
-                        raise Exception("CRAMs need a reference")
-                self.normals.append(bam)
+        # for bam in params.normals:
+        #     debug(f"Checking alignment input file: {bam}")
+        #     # we might actually waive this exception (maybe with an option) if just one file is not
+        #     # found? then again we dont want to just do half an analysis.
+        #     bam = Path(bam)
+        #     if not bam.is_file():
+        #         raise Exception(f"Could not find bam file: {bam}")
+        #     else:
+        #         # this will be done multiple times, so you can combine bams and crams in the
+        #         # analysis without any issues
+        #         with AlignmentFile(bam, "r") as tFile:
+        #             if tFile.is_cram and self.referenceFile is None:
+        #                 raise Exception("CRAMs need a reference")
+        #         self.normals.append(bam)
 
         self.blackListFile = None
         # we really only need to check if the file exists, if a file was actually given to us
