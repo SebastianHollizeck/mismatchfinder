@@ -89,7 +89,7 @@ class BamScanner(Process):
             nReads += 1
             # we check every 10K reads how uch time has passed and if it has been more than 30
             # we give an update
-            if nReads % 10000 == 0:
+            if nReads % 100000 == 0:
 
                 now = datetime.datetime.now()
                 # time since the last output
