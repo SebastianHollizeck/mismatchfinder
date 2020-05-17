@@ -102,7 +102,7 @@ class InputParser(object):
 
         basicConfig(
             level=params.verbosity.upper(),
-            format="%(asctime)s %(processName)-11s %(levelname)-6s %(message)s",
+            format="%(asctime)s %(processName)-12s %(levelname)-6s %(message)s",
         )
 
         ############################################################################################
