@@ -1,7 +1,6 @@
 from logging import debug, error
 
 import matplotlib.pyplot as plt
-from dask.array.wrap import w
 from numpy import (
     apply_along_axis,
     argmin,
