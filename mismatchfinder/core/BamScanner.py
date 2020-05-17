@@ -84,7 +84,7 @@ class BamScanner(Process):
             self.bamFilePath, "r", reference_filename=self.referenceFile
         )
 
-        for read in bamFile:
+        for read in bamFile.fetch(until_eof=True):
             nReads += 1
             # report every 100 reads
             if nReads % 1000000 == 0:
