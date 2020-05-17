@@ -78,6 +78,7 @@ class BamScanner(Process):
 
         # get the time we started with this
         startTime = datetime.datetime.now()
+        currTime = datetime.datetime.now()
 
         # we work directly on the bam without iterator creation
         bamFile = pysam.AlignmentFile(
@@ -86,20 +87,30 @@ class BamScanner(Process):
 
         for read in bamFile.fetch(until_eof=True):
             nReads += 1
-            # report every 100 reads
-            if nReads % 1000000 == 0:
-                # time so far
-                currTime = datetime.datetime.now()
-                deltaTime = currTime - startTime
-                readsPerSec = nReads / deltaTime.total_seconds()
+            # we check every 10K reads how uch time has passed and if it has been more than 30
+            # we give an update
+            if nReads % 10000 == 0:
 
-                # we really just care about the general aread so we round to the next hundred
-                readsPerSec = int(round(readsPerSec, -2))
+                now = datetime.datetime.now()
+                # time since the last output
+                currDelta = now - currTime
 
-                # give some info how far we are already through the bam
-                info(
-                    f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
-                )
+                # if it has been 10 seconds we last said something
+                if currDelta.total_seconds() > 10:
+
+                    # time since start
+                    deltaTime = now - startTime
+
+                    readsPerSec = nReads / deltaTime.total_seconds()
+
+                    # we really just care about the general aread so we round to the next hundred
+                    readsPerSec = int(round(readsPerSec, -2))
+
+                    # give some info how far we are already through the bam
+                    info(
+                        f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
+                    )
+                    currTime = now
 
             # we only want proper reads and no secondaries. We can be pretty lenient here, because we
             # check for the mismatch itself if the sequencing quality is high enough later.
