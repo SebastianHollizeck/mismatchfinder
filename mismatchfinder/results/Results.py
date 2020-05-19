@@ -42,6 +42,8 @@ class MismatchCandidates(object):
         nDiscordantReads,
         nAlignedBases,
         bam,
+        chrHash,
+        contextHash,
     ):
 
         super(MismatchCandidates, self).__init__(),
@@ -56,6 +58,8 @@ class MismatchCandidates(object):
         self.nSites = len(self.mutSites)
         self.nDiscordantReads = nDiscordantReads
         self.nAlignedBases = nAlignedBases
+        self.chrHash = chrHash
+        self.contextHash = contextHash
 
     def convertToPandasDataFrameRow(self):
         fields = deepcopy(self.__dict__)
@@ -89,7 +93,23 @@ class MismatchCandidates(object):
         resSBS = {}
         resDBS = {}
 
-        for (chr, pos, refContext, altContext, misMatchClass) in self.mutSites:
+        for (
+            chrHash,
+            pos,
+            refContextHash,
+            altContextHash,
+            misMatchClass,
+        ) in self.mutSites:
+
+            occurances = self.mutSites[
+                (chrHash, pos, refContextHash, altContextHash, misMatchClass)
+            ]
+
+            # decode the hashes to actual strings
+            chr = self.chrHash[chrHash]
+            refContext = self.contextHash[refContextHash]
+            altContext = self.contextHash[altContextHash]
+
             # this means we have only one mismatch
             if misMatchClass == 1:
                 # we need to convert the mismatch into the right strand (reverse complement, if the
@@ -126,9 +146,9 @@ class MismatchCandidates(object):
                 key = refContext + ">" + altContext
 
                 if not key in resDBS:
-                    resDBS[key] = 1
+                    resDBS[key] = occurances
                 else:
-                    resDBS[key] += 1
+                    resDBS[key] += occurances
 
         # need to have a newline for that as well
         info("Checked 100.00% of mismatches               ")
@@ -157,7 +177,17 @@ class MismatchCandidates(object):
         cache = None
         # we go through all sites, for caching purposes its important here to have a sorted list
         # otherwise we have to refresh the cache with every change of the chromosome
-        for (chr, pos, refContext, altContext, misMatchClass) in sorted(self.mutSites):
+        for (chrHash, pos, refContextHash, altContextHash, misMatchClass) in sorted(
+            self.mutSites
+        ):
+
+            occurrences = self.mutSites[
+                (chrHash, pos, refContextHash, altContextHash, misMatchClass)
+            ]
+            # decode the hashes to actual strings
+            chr = self.chrHash[chrHash]
+            refContext = self.contextHash[refContextHash]
+            altContext = self.contextHash[altContextHash]
 
             # first we need to cache the data from the chromosome that the site is on
             if cache is None or cache.chr != chr:
@@ -169,9 +199,6 @@ class MismatchCandidates(object):
                     if discard:
                         continue
 
-            occurrences = self.mutSites[
-                (chr, pos, refContext, altContext, misMatchClass)
-            ]
             # get the index of all germline variants with a trinucleotide at this position
             varIdxs = cache.findOverlaps(pos)
 
@@ -218,7 +245,15 @@ class MismatchCandidates(object):
                 if refContext[1].isupper():
                     nShiftFail += 1
 
-            res[(chr, pos, refContext, altContext, misMatchClass)] = occurrences
+            # encode the possible new refcontext, the rest is still the same
+            refContextHash = hash(refContext)
+            if refContextHash not in self.contextHash:
+                self.contextHash[refContextHash] = refContext
+
+            res[
+                (chrHash, pos, refContextHash, altContextHash, misMatchClass)
+            ] = occurrences
+
             # we want to count the double mismatches as double the single mismatches
             # at least at the moment
             self.nSomaticMisMatches += misMatchClass * occurrences
