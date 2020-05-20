@@ -90,6 +90,12 @@ class MismatchCandidates(object):
         resDBS = {}
 
         for (chr, pos, refContext, altContext, misMatchClass) in self.mutSites:
+
+            # get the key before we play around with the contexts
+            occurrences = self.mutSites[
+                (chr, pos, refContext, altContext, misMatchClass)
+            ]
+
             # this means we have only one mismatch
             if misMatchClass == 1:
                 # we need to convert the mismatch into the right strand (reverse complement, if the
@@ -126,9 +132,9 @@ class MismatchCandidates(object):
                 key = refContext + ">" + altContext
 
                 if not key in resDBS:
-                    resDBS[key] = 1
+                    resDBS[key] = occurrences
                 else:
-                    resDBS[key] += 1
+                    resDBS[key] += occurrences
 
         # need to have a newline for that as well
         info("Checked 100.00% of mismatches               ")
