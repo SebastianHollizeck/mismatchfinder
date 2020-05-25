@@ -69,7 +69,6 @@ class BamScanner(Process):
         nNoMisMatchReads = 0
         nReads = 0
         nBlackListedReads = 0
-        nNonWhiteListed = 0
         nMisMatches = 0
         nAlignedBases = 0
 
@@ -124,24 +123,19 @@ class BamScanner(Process):
                 nLowQualReads += 1
                 continue
             else:
-                # it is faster to check if there are mismatches before checking if they align to
-                # either white or blacklisted regions
-                if not hasMisMatches(read):
-                    nNoMisMatchReads += 1
+
+                # if we did get a blacklist and the read actually is within that region, we
+                # discard it and keep a count on how many we discarded
+                if not self.blackList is None and self.blackList.isWithinRegion(read):
+                    nBlackListedReads += 1
+
                 else:
-
-                    # if we did get a blacklist and the read actually is within that region, we
-                    # discard it and keep a count on how many we discarded
-                    if not self.blackList is None and self.blackList.isWithinRegion(
-                        read
-                    ):
-                        nBlackListedReads += 1
-
-                    else:
-                        # only analyse read in the whitelist region if there is one
-                        if self.whiteList is None or self.whiteList.isWithinRegion(
-                            read
-                        ):
+                    # only analyse read in the whitelist region if there is one
+                    if self.whiteList is None or self.whiteList.isWithinRegion(read):
+                        # we only do our mismacth analysis if the read actually does have mismatches
+                        if not hasMisMatches(read):
+                            nNoMisMatchReads += 1
+                        else:
                             # get all mismatches in this read
                             tmpMisMatches = scanAlignedSegment(read, self.minBQ)
                             # store the mismatches and keep a record how often each was found
@@ -153,13 +147,15 @@ class BamScanner(Process):
                             # we also store the amount of mismatches found, so we can calculate
                             # the mismatches per read which should be stable between samples
                             nMisMatches += len(tmpMisMatches)
-                            # store the fragment length of this read for fragment size statistics
-                            fragLengths.append(abs(read.template_length))
 
-                            # add the amount of bases of this read that were aligned
-                            nAlignedBases += read.query_alignment_length
-                        else:
-                            nNonWhiteListed += 1
+                        # even if the fragment doesnt have any mismatches it is important to
+                        # store the fragment length of this read for fragment size statistics
+                        fragLengths.append(abs(read.template_length))
+
+                        # add the amount of bases of this read that were aligned
+                        nAlignedBases += read.query_alignment_length
+                    else:
+                        nBlackListedReads += 1
 
         # we are done so we update the status as well
 
@@ -219,6 +215,7 @@ class BamScanner(Process):
             nLowQualReads=nLowQualReads,
             nNoMisMatchReads=nNoMisMatchReads,
             nBlackListedReads=nBlackListedReads,
+            nLowQualReads=nLowQualReads,
             nAlignedReads=nAlignedReads,
             fragmentSizeQuantiles=fragLenQuantiles,
             nDiscordantReads=nDiscordantReads,

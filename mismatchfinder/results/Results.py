@@ -36,6 +36,7 @@ class MismatchCandidates(object):
         nLowQualReads,
         nNoMisMatchReads,
         nBlackListedReads,
+        nLowQualReads,
         nAlignedReads,
         fragmentSizeQuantiles,
         nMisMatches,
@@ -50,6 +51,7 @@ class MismatchCandidates(object):
         self.nReads = nReads
         self.nNoMisMatchReads = nNoMisMatchReads
         self.nBlackListedReads = nBlackListedReads
+        self.nLowQualReads = nLowQualReads
         self.nAlignedReads = nAlignedReads
         self.fragmentSizeQuantiles = fragmentSizeQuantiles
         self.nMisMatches = nMisMatches
