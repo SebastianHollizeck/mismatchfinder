@@ -85,6 +85,11 @@ class MismatchCandidates(object):
         except KeyError:
             # this is acceptable because they are actually removed for pickling the results
             debug("chrHash field was already deleted")
+        try:
+            fields.pop("contextHash")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("contextHash field was already deleted")
 
         # use the rest to make a dataframe
         df = DataFrame.from_records([fields], index=[self.bam])
