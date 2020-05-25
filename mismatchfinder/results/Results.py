@@ -309,3 +309,13 @@ class MismatchCandidates(object):
             del self.SBScontexts
         if "DBScontexts" in fields:
             del self.DBScontexts
+
+    def writeSitesToFile(self, outFileRoot, bamFilePath):
+        # we put the bamname into the file name
+        file = outFileRoot.parent / (f"{outFileRoot.name}_{bamFilePath.name}_sites.tsv")
+        debug(f"Spilling all sites to file: {file}")
+        with open(file, "w") as outFH:
+            for (chr, pos, refContext, altContext, misMatchClass) in self.mutSites:
+                outFH.write(
+                    f"{chr}\t{pos}\t{refContext}\t{altContext}\t{misMatchClass}\n"
+                )

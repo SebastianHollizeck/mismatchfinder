@@ -246,6 +246,9 @@ class BamScanner(Process):
                 mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
                 mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
 
+            # dont need a lock here, as we create a new file for each bam
+            mutCands.writeSitesToFile(self.outFileRoot, self.bamFilePath)
+
         # sadly it takes VERY long to actually put things into the result queue if the sites
         # copied as well... the issus is the pickling. So we really need to work with this within
         # this process
