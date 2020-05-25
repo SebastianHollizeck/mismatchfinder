@@ -62,14 +62,29 @@ class MismatchCandidates(object):
         # remove fields which have objects or similar as value
         try:
             fields.pop("mutSites")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("mitSites field was already deleted")
+        try:
             fields.pop("fragmentSizeQuantiles")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("fragmentSizeQuantiles field was already deleted")
+        try:
             fields.pop("SBScontexts")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("SBScontexts field was already deleted")
+        try:
             fields.pop("DBScontexts")
         except KeyError:
             # this is acceptable because they are actually removed for pickling the results
-            debug(
-                "Some fields were already deleted due to cleanup, this is not a problem"
-            )
+            debug("DBScontexts field was already deleted")
+        try:
+            fields.pop("chrHash")
+        except KeyError:
+            # this is acceptable because they are actually removed for pickling the results
+            debug("chrHash field was already deleted")
 
         # use the rest to make a dataframe
         df = DataFrame.from_records([fields], index=[self.bam])
