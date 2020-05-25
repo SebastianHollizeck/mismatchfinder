@@ -215,7 +215,6 @@ class BamScanner(Process):
             nLowQualReads=nLowQualReads,
             nNoMisMatchReads=nNoMisMatchReads,
             nBlackListedReads=nBlackListedReads,
-            nLowQualReads=nLowQualReads,
             nAlignedReads=nAlignedReads,
             fragmentSizeQuantiles=fragLenQuantiles,
             nDiscordantReads=nDiscordantReads,

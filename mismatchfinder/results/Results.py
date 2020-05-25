@@ -33,7 +33,6 @@ class MismatchCandidates(object):
         self,
         mutSites,
         nReads,
-        nLowQualReads,
         nNoMisMatchReads,
         nBlackListedReads,
         nLowQualReads,
