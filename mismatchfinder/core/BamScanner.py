@@ -1,5 +1,5 @@
 import datetime
-from logging import debug, error, info
+from logging import debug, error, info, basicConfig, getLogger
 from multiprocessing import Process
 from sys import getsizeof
 
@@ -7,11 +7,8 @@ import pysam
 from numpy import array, quantile, sort
 
 from mismatchfinder.results.Results import MismatchCandidates
+from mismatchfinder.core.EndMotives import EndMotives
 from mismatchfinder.utils.Misc import countLowerCase
-
-#
-# basicConfig(level=DEBUG, format="(%(threadName)-9s) %(message)s")
-#
 
 
 class BamScanner(Process):
@@ -30,6 +27,8 @@ class BamScanner(Process):
         whiteList=None,
         germObj=None,
         outFileRoot=None,
+        kmer=4,
+        log=None,
     ):
         super(BamScanner, self).__init__()
 
@@ -49,7 +48,10 @@ class BamScanner(Process):
 
         self.outFileRoot = outFileRoot
 
-        # basicConfig(level=DEBUG, format="%(processName)-10s  %(message)s")
+        self.endMotives = EndMotives(kmer)
+
+        self.logger = log
+        self.logLevel = log.level
 
     # this function gets all sites of mismatches from any mapped read in a bam
     # use qualThreshold, bedObj and minMQ to exclude reads and mismatches
@@ -59,8 +61,7 @@ class BamScanner(Process):
     def getMutationSites(self):
 
         # state your purpose ;)
-        info("Checking reads for mismatches")
-
+        self.logger.info("Checking reads for mismatches")
         # store the found sites of mutations and how often they occured
         mutSites = {}
 
@@ -106,7 +107,7 @@ class BamScanner(Process):
                     readsPerSec = int(round(readsPerSec, -2))
 
                     # give some info how far we are already through the bam
-                    info(
+                    self.logger.info(
                         f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
                     )
                     currTime = now
@@ -154,18 +155,21 @@ class BamScanner(Process):
 
                         # add the amount of bases of this read that were aligned
                         nAlignedBases += read.query_alignment_length
+
+                        # we also care about the endmotives of the reads, so we store those
+                        self.endMotives.count(read)
                     else:
                         nBlackListedReads += 1
 
         # we are done so we update the status as well
 
-        info(
+        self.logger.info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
 
         # did we have an issue with reads?
         if len(fragLengths) == 0:
-            error(
+            self.logger.error(
                 f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}\nNonWhiteListed: {nNonWhiteListed}"
             )
             raise Exception(f"No reads left for {self.bamFilePath}")
@@ -225,7 +229,11 @@ class BamScanner(Process):
 
     def run(self):
 
-        info(f"Starting scan of {self.bamFilePath.name}")
+        # for some reason, we need to reset the logLevel here otherwise it resets to WARNING
+        # maybe it has to do with using "spawn" as a start method
+        self.logger.setLevel(self.logLevel)
+
+        self.logger.info(f"Starting scan of {self.bamFilePath.name}")
         # initiate bam object
 
         # execute
@@ -245,6 +253,7 @@ class BamScanner(Process):
                 mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
                 mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
                 mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
+                self.endMotives.writeFreqsToFile(self.outFileRoot, self.bamFilePath)
 
             # dont need a lock here, as we create a new file for each bam
             mutCands.writeSitesToFile(self.outFileRoot, self.bamFilePath)
@@ -258,17 +267,14 @@ class BamScanner(Process):
         ## TODO: fit a density function for the fragmentSizes?
         ## TODO: maybe also "delete" the field instead of set to None
 
-        # removing intermediate fields and things that are not required anymore
-        # mutCands.cleanUpForPickle()
-
-        # debug("Adding result object to queue")
-        # # add it to the shared output queue
-        # self.results.put(mutCands.convertToPandasDataFrameRow())
-
-        debug("Releasing requested resource lock")
+        self.logger.debug("Releasing requested resource lock")
         # release the block for resources again
         self.semaphore.release()
-        info(f"Finished scan of {self.bamFilePath.name}")
+        self.logger.info(f"Finished scan of {self.bamFilePath.name}")
+
+        # explicitly destroy the semaphore and lock
+        del self.semaphore
+        del self.lock
 
 
 # this is a simple check if a MDstring contains any mismatches
@@ -387,19 +393,19 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
             # position if there are indels in the read but at the position it is taken from)
             if vis:
                 # print the query (the actual read) on top
-                debug(AlignedSegment.query_alignment_sequence)
+                self.logger.debug(AlignedSegment.query_alignment_sequence)
                 line = ""
                 for i in range(0, readPos - 1):
                     line += " "
                 line += altContext
-                debug(line)
+                self.logger.debug(line)
                 # print the template (the reference below)
-                debug(alignedRefSequence, addTime=False)
+                self.logger.debug(alignedRefSequence, addTime=False)
                 line = ""
                 for i in range(0, readPos - 1):
                     line += " "
                 line += refContext
-                debug(line)
+                self.logger.debug(line)
 
             # add to the found mutations now that everything is sorted out
             mutations.append(mut)

@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from logging import basicConfig, debug, error, info
+from logging import basicConfig, debug, error, info, getLogger, root
 from pathlib import Path
 from sys import exit
 
@@ -99,11 +99,7 @@ class InputParser(object):
 
         # set up the logging before we do anything else
         # now we tell people how much they want to know
-
-        basicConfig(
-            level=params.verbosity.upper(),
-            format="%(asctime)s %(processName)-13s %(levelname)-6s %(message)s",
-        )
+        root.setLevel(params.verbosity.upper())
 
         ############################################################################################
         ###                                    sanity check                                      ###

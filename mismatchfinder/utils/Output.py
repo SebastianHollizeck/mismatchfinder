@@ -104,6 +104,7 @@ def createOutputFiles(outFileRoot):
     SBSFile = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")
     DBSFile = outFileRoot.parent / (outFileRoot.name + "_DBScontexts.tsv")
     statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
+    endMotsFile = outFileRoot.parent / (outFileRoot.name + "_endMotives.tsv")
 
     # write the header to the files with one extra column where the name will go
     try:
@@ -114,6 +115,9 @@ def createOutputFiles(outFileRoot):
             fh.write("bam\t" + "\t".join(DBSorder) + "\n")
 
         with statsFile.open("w") as fh:
+            # we just want to create the file here
+            pass
+        with endMotsFile.open("w") as fh:
             # we just want to create the file here
             pass
     except:
