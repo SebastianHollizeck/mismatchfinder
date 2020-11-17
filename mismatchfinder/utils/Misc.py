@@ -21,6 +21,7 @@ def buildNCLSindex(sites):
     return index
 
 
+# the complement for each normal base to be used in reverse complement
 complement = {
     "A": "T",
     "C": "G",
@@ -32,7 +33,7 @@ complement = {
     "t": "a",
 }
 
-
+# returns the reverse complement of the bases put in (will fail for non standard bases)
 def reverseComplement(dna):
     bases = list(dna)
     bases = reversed([complement.get(base, base) for base in bases])

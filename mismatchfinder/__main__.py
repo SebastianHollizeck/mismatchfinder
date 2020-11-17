@@ -29,8 +29,10 @@ def main():
     # start with parameter Parsing
     inputs = InputParser()
 
+    logger = getLogger()
+
     # generate the blacklist
-    debug("Parsing blacklist file")
+    logger.debug("Parsing blacklist file")
     blackList = BedObject.parseFile(inputs.blackListFile)
 
     # generate white list
@@ -52,8 +54,6 @@ def main():
     # store the results of the parallel processing
     tumourResults = SimpleQueue()
     normalResults = SimpleQueue()
-
-    logger = getLogger()
 
     # spawn processes to analyse each bam individually
     for bam in inputs.bamFiles:
@@ -102,7 +102,7 @@ def main():
     # TODO: check if we need to consume the queue here already to reduce the memory footprint, or
     # if the memory requirement is actually from the zarr storage being cached so often
 
-    debug("Waiting for all parallel processes to finish")
+    logger.debug("Waiting for all parallel processes to finish")
     # wait for all processes to finish before we continue
     for p in processes:
         p.join()
@@ -121,7 +121,7 @@ def main():
     SBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_SBSweights.tsv"
     )
-    debug(f"Writing SBS signature weights to {SBSweightsFile}")
+    logger.debug(f"Writing SBS signature weights to {SBSweightsFile}")
     SBSweights.to_csv(SBSweightsFile, sep="\t")
 
     DBSsig = Signature.loadSignaturesFromFile(type="DBS")
@@ -130,10 +130,10 @@ def main():
     DBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_DBSweights.tsv"
     )
-    debug(f"Writing DBS signature weights to {DBSweightsFile}")
+    logger.debug(f"Writing DBS signature weights to {DBSweightsFile}")
     DBSweights.to_csv(DBSweightsFile, sep="\t")
 
-    info("FINISHED")
+    logger.info("FINISHED")
 
 
 if __name__ == "__main__":
