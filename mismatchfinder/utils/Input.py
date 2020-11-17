@@ -106,11 +106,14 @@ class InputParser(object):
         ############################################################################################
 
         # find out if we have a reference
-        rFile = Path(params.reference)
-        if params.reference is None or not rFile.is_file():
+        try:
+            rFile = Path(params.reference)
+            if rFile.is_file():
+                self.referenceFile = params.reference
+            else:
+                self.referenceFile = None
+        except TypeError:
             self.referenceFile = None
-        else:
-            self.referenceFile = params.reference
 
         # we better check if the bam files actually exist
         self.bamFiles = []
