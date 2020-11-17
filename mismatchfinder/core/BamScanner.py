@@ -118,6 +118,7 @@ class BamScanner(Process):
                 read.is_duplicate
                 or read.is_qcfail
                 or read.is_secondary
+                or read.is_supplementary
                 or read.is_unmapped
                 or read.mapping_quality < self.minMQ
             ):
