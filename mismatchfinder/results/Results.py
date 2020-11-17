@@ -166,12 +166,12 @@ class MismatchCandidates(object):
     def checkGermlineStatus(self, germlineObj, discard=False, confidenceThreshold=2):
 
         if not germlineObj is None:
-            debug(f"Checking germline status for {len(self.mutSites)} sites")
+            info(f"Checking germline status for {len(self.mutSites)} sites")
             self.nSomaticMisMatches = 0
             self.nSomaticMisMatchSites = 0
             self.nConfidentSomaticMisMatchSites = 0
         else:
-            debug("No germline resource found, so no check will be performed")
+            info("No germline resource found, so no check will be performed")
             self.nSomaticMisMatches = None
             self.nSomaticMisMatchSites = None
             self.nConfidentSomaticMisMatchSites = None
