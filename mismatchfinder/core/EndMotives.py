@@ -24,13 +24,13 @@ class EndMotives(object):
             self.counts[downStreamEnd] = self.counts[downStreamEnd] + 1
             self.n = self.n + 1
         except KeyError:
-            debug(f"Unknown downstream end: ", downStreamEnd)
+            debug(f"Unknown downstream end: {downStreamEnd}")
 
         try:
             self.counts[upStreamEnd] = self.counts[upStreamEnd] + 1
             self.n = self.n + 1
         except KeyError:
-            debug(f"Unknown upstream end: ", upStreamEnd)
+            debug(f"Unknown upstream end: {upStreamEnd}")
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):
