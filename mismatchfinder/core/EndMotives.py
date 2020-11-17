@@ -7,7 +7,6 @@ from logging import debug
 
 
 class EndMotives(object):
-
     def __init__(self, kmer=4):
 
         super(EndMotives, self).__init__()
@@ -17,62 +16,58 @@ class EndMotives(object):
         self.n = 0
         self.freqs = None
 
-
     def count(self, read):
 
         (downStreamEnd, upStreamEnd) = EndMotives.get5primeFragmentEnds(read, self.kmer)
 
-        self.counts[downStreamEnd] = self.counts[downStreamEnd] +1
-        self.counts[upStreamEnd] = self.counts[upStreamEnd] +1
+        self.counts[downStreamEnd] = self.counts[downStreamEnd] + 1
+        self.counts[upStreamEnd] = self.counts[upStreamEnd] + 1
 
-        self.n = self.n+2
-
-
+        self.n = self.n + 2
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):
         debug(f"Creating possible end motives of length {kmer}")
-        bases=["A", "T", "C", "G"]
+        bases = ["A", "T", "C", "G"]
 
-        motiveCombs = [ "".join(p) for p in product(bases, bases, repeat=2)]
+        motiveCombs = ["".join(p) for p in product(bases, bases, repeat=2)]
 
         motiveCountDict = dict.fromkeys(motiveCombs, 0)
 
         debug(f"Created {len(motiveCountDict)} different end motives")
 
-        #we also add a count for how often we had a mismatch in the ends
+        # we also add a count for how often we had a mismatch in the ends
         motiveCountDict["mismatch"] = 0
-        return(motiveCountDict)
+        return motiveCountDict
 
     @classmethod
     def get5primeFragmentEnds(cls, read, length):
 
-        #we only need the reference sequence to get the sequence
-        alignedRefSequence = read.get_reference_sequence()
+        # we only need the reference sequence to get the sequence
+        alignedQuerySequence = read.query_alignment_sequence
 
-        downStream = alignedRefSequence[0:length]
-        upStream = alignedRefSequence[len(alignedRefSequence)-length:]
+        downStream = alignedQuerySequence[0:length]
+        upStream = alignedQuerySequence[len(alignedQuerySequence) - length :]
 
-        #we do want the reverse complement of the downstream sequence to get the 5' of both ends
-        downStream = reverseComplement(downStream)
+        # we do want the reverse complement of the upstream sequence to get the 5' of both ends
+        upStream = reverseComplement(upStream)
 
-        #now we check if there is a mismatch in the end sequences and set the and accordingly
-        if(countLowerCase(downStream) != 0):
+        # now we check if there is a mismatch in the end sequences and set the and accordingly
+        if countLowerCase(downStream) != 0:
             downStream = "mismatch"
-        if(countLowerCase(upStream) != 0):
-            upStream ="mismatch"
+        if countLowerCase(upStream) != 0:
+            upStream = "mismatch"
 
         return (downStream, upStream)
-
 
     def getFrequencies(self, refresh=False):
 
         debug("Converting counts to frequencies")
         if self.freqs is None or refresh:
-            #we create a frequency dictionary by dividing every value by the total amount of ends
+            # we create a frequency dictionary by dividing every value by the total amount of ends
             self.freqs = {k: v / self.n for k, v in self.counts.items()}
 
-        return(self.freqs)
+        return self.freqs
 
     def writeFreqsToFile(self, outFileRoot, bamFilePath):
 
@@ -82,7 +77,7 @@ class EndMotives(object):
 
             df = DataFrame([self.getFrequencies()])
 
-            #add the bam column at the beginning
+            # add the bam column at the beginning
             df.insert(0, "bam", bamFilePath)
 
             # if the position in the file is still 0 we need to write the header, otherwise we just
