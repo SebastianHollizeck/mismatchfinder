@@ -20,10 +20,17 @@ class EndMotives(object):
 
         (downStreamEnd, upStreamEnd) = EndMotives.get5primeFragmentEnds(read, self.kmer)
 
-        self.counts[downStreamEnd] = self.counts[downStreamEnd] + 1
-        self.counts[upStreamEnd] = self.counts[upStreamEnd] + 1
+        try:
+            self.counts[downStreamEnd] = self.counts[downStreamEnd] + 1
+            self.n = self.n + 1
+        except KeyError:
+            debug(f"Unknown downstream end: ", downStreamEnd)
 
-        self.n = self.n + 2
+        try:
+            self.counts[upStreamEnd] = self.counts[upStreamEnd] + 1
+            self.n = self.n + 1
+        except KeyError:
+            debug(f"Unknown upstream end: ", upStreamEnd)
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):
