@@ -106,7 +106,6 @@ def main():
     # wait for all processes to finish before we continue
     for p in processes:
         p.join()
-        p.close()
 
     del processes
 
