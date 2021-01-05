@@ -316,6 +316,7 @@ class MismatchCandidates(object):
         debug(f"Spilling all sites to file: {file}")
         with open(file, "w") as outFH:
             for (chr, pos, refContext, altContext, misMatchClass) in self.mutSites:
+                count = self.mutSites[(chr, pos, refContext, altContext, misMatchClass)]
                 outFH.write(
-                    f"{chr}\t{pos}\t{refContext}\t{altContext}\t{misMatchClass}\n"
+                    f"{chr}\t{pos}\t{refContext}\t{altContext}\t{count}\t{misMatchClass}\n"
                 )
