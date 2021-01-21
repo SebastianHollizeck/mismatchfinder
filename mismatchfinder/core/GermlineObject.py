@@ -1,4 +1,4 @@
-from logging import debug, error
+from logging import debug, error, info
 from sys import exit
 
 from zarr import open_group
@@ -72,7 +72,7 @@ class ChromosomeCache(object):
 
     def __init__(self, germlineObj, chr):
         super(ChromosomeCache, self).__init__()
-        debug(f"creating cache for chr {chr}")
+        info(f"creating cache for chr {chr}")
         try:
             self.index = germlineObj.loadChromosomeIndex(chr)
             self.refs = germlineObj.loadChromsomeRefs(chr)
