@@ -128,9 +128,9 @@ class MismatchCandidates(object):
                 # now that the variants are normalised, we convert them into counts
                 key = refContext.upper() + ">" + altContext[1]
                 if not key in resSBS:
-                    resSBS[key] = 1
+                    resSBS[key] = occurrences
                 else:
-                    resSBS[key] += 1
+                    resSBS[key] += occurrences
             elif misMatchClass == 2:
                 # DBS can only happen in the first two bases, because we shifted the mismatches
                 # so we can discard the last char of the context and convert it to upper, as
