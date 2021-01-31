@@ -61,7 +61,7 @@ class BedObject(object):
             return BedObject(file)
 
     # check if the read is aligned to any blacklisted area (again NCLS does the heavy lifting)
-    def isWithinRegion(self, read):
+    def isReadWithinRegion(self, read):
         try:
             # the idea is to retrieve the NCLS object which correcponds to the contig the read mapped
             # to (read.reference_name), then ask NCLS to find an overlap between the area where the
@@ -79,6 +79,35 @@ class BedObject(object):
 
         # now that that worked, we just need to see if we have any overlaps at all. and if we do, we
         # can confidently say that this read is blacklisted
+        if len(bedIt) > 0:
+            return True
+        else:
+            return False
+
+    # this is very similar to the read check, but we check again if the mismatch itself is also in
+    # the region, because even though a read overlaps with a region, the mismatch could be outside
+    def isMisMatchWithinRegion(self, mismatch):
+
+        chr, pos, refContext, altContext, misMatchClass = mismatch
+        # here we calculate the starting pos of the mismatch, if its a snp, the start pos is the
+        # center variant, which is pos +2 -1, where if its a double, we have the actual pos +2 -2
+        internalMisMatchStartPos = pos + 2 - misMatchClass
+        # the end pos is always the pos after the center pos
+        internalMisMatchEndPos = pos + 2
+
+        print(
+            f"startPos: {internalMisMatchStartPos} and endPos: {internalMisMatchEndPos}"
+        )
+        try:
+            bedIt = list(
+                self.__ncls[chr].find_overlap(
+                    internalMisMatchStartPos, internalMisMatchEndPos
+                )
+            )
+        except KeyError:
+            return false
+
+        # and now we decide if there was an overlap
         if len(bedIt) > 0:
             return True
         else:

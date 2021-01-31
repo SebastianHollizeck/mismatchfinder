@@ -133,7 +133,9 @@ class BamScanner(Process):
 
                 else:
                     # only analyse read in the whitelist region if there is one
-                    if self.whiteList is None or self.whiteList.isWithinRegion(read):
+                    if self.whiteList is None or self.whiteList.isReadWithinRegion(
+                        read
+                    ):
                         # we only do our mismacth analysis if the read actually does have mismatches
                         if not hasMisMatches(read):
                             nNoMisMatchReads += 1
@@ -408,7 +410,15 @@ def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
                 line += refContext
                 self.logger.debug(line)
 
-            # add to the found mutations now that everything is sorted out
-            mutations.append(mut)
+            # we do one last check if the actual mismatch is in the region
+            if not self.blackList is None and self.blackList.isMisMatchWithinRegion(
+                mut
+            ):
+                # we do nothing here, because the mismatch is outside the region of interest
+                append = False
+
+            elif self.whiteList is None or self.whiteList.isMisMatchWithinRegion(mut):
+                # add to the found mutations now that everything is sorted out
+                mutations.append(mut)
 
     return mutations
