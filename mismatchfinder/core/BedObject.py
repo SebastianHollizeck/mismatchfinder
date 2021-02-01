@@ -95,9 +95,9 @@ class BedObject(object):
         # the end pos is always the pos after the center pos
         internalMisMatchEndPos = pos + 2
 
-        print(
-            f"startPos: {internalMisMatchStartPos} and endPos: {internalMisMatchEndPos}"
-        )
+        # print(
+        #    f"startPos: {internalMisMatchStartPos} and endPos: {internalMisMatchEndPos}"
+        # )
         try:
             bedIt = list(
                 self.__ncls[chr].find_overlap(
