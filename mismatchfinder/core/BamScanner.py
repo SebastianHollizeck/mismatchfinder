@@ -141,7 +141,7 @@ class BamScanner(Process):
                             nNoMisMatchReads += 1
                         else:
                             # get all mismatches in this read
-                            tmpMisMatches = scanAlignedSegment(read, self.minBQ)
+                            tmpMisMatches = self.scanAlignedSegment(read, self.minBQ)
                             # store the mismatches and keep a record how often each was found
                             for mm in tmpMisMatches:
                                 if mm in mutSites:
@@ -302,7 +302,7 @@ def hasMisMatches(read):
 
 # read through one read and find all mismatches and their contexts
 # can visualize the contexts on the reads
-def scanAlignedSegment(AlignedSegment, qualThreshold=21, vis=False):
+def scanAlignedSegment(self, AlignedSegment, qualThreshold=21, vis=False):
 
     # this is where we will store the sites we find in this read
     mutations = []
