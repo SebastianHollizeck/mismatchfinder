@@ -1,5 +1,5 @@
 from datetime import datetime
-from logging import error
+from logging import error, debug
 from sys import stderr
 
 from matplotlib.pyplot import figure, show
@@ -99,6 +99,8 @@ def scatter_hist(x, y, ax, ax_histy, range=None, label=None, bins=20):
 
 
 def createOutputFiles(outFileRoot):
+
+    debug("Creating empty output files with headers")
 
     # create the full path of the files
     SBSFile = outFileRoot.parent / (outFileRoot.name + "_SBScontexts.tsv")

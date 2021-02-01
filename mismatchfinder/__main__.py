@@ -4,7 +4,9 @@
 from logging import debug, info, basicConfig, getLogger
 
 # set the logging up
-basicConfig(format="%(asctime)s %(processName)-13s %(levelname)-6s %(message)s",)
+basicConfig(
+    format="%(asctime)s %(processName)-13s %(levelname)-6s %(message)s",
+)
 
 from multiprocessing import Lock, Semaphore, SimpleQueue, set_start_method
 
