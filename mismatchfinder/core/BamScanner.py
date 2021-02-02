@@ -253,6 +253,7 @@ class BamScanner(Process):
         if not self.outFileRoot is None:
             # we request only one thread to write to the files at one time
             with self.lock:
+                self.logger.info(f"Writing result counts to file")
                 mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
                 mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
                 mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
