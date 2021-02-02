@@ -39,6 +39,8 @@ class BedObject(object):
                     # convert to array with dtype (ncls needs that)
                     starts = array(starts, dtype=int64)
                     ends = array(ends, dtype=int64)
+                    # add one to the end, to have inclusive ends
+                    ends = ends + 1
 
                     # create the data structure (third column is ids... which could be anything, but
                     # needs to be a number )

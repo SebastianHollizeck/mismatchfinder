@@ -115,6 +115,8 @@ def main():
     semaphore = None
     fhLock = None
 
+    # TODO:  a check if there were any exceptions and only then continue
+
     # read the files of the parallel processed back in and analyse the results
     SBSsig = Signature.loadSignaturesFromFile(type="SBS")
     SBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_SBScontexts.tsv")
