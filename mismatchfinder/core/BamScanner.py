@@ -261,6 +261,8 @@ class BamScanner(Process):
 
             # dont need a lock here, as we create a new file for each bam
             mutCands.writeSitesToFile(self.outFileRoot, self.bamFilePath)
+        else:
+            self.logger.info(f"No output file root found so no output written")
 
         # sadly it takes VERY long to actually put things into the result queue if the sites
         # copied as well... the issus is the pickling. So we really need to work with this within
