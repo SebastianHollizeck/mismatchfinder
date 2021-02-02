@@ -130,6 +130,9 @@ class Signature(object):
             if countsTable.isna().values.any():
                 error(f"File {file} could not be parsed")
                 raise Exception(f"File {file} could not be parsed")
+            elif len(countsTable.index) == 0:
+                error(f"File {file} did not contain any data")
+                raise Exception(f"File {file} did not contain any data")
 
         if method == "QP":
             sigWeights = self.whichSignaturesQP(countsTable.values)
