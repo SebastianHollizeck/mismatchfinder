@@ -18,19 +18,13 @@ class EndMotives(object):
 
     def count(self, read):
 
-        (downStreamEnd, upStreamEnd) = EndMotives.get5primeFragmentEnds(read, self.kmer)
+        endSeq = EndMotives.get5primeReadEnd(read, self.kmer)
 
         try:
-            self.counts[downStreamEnd] = self.counts[downStreamEnd] + 1
+            self.counts[endSeq] = self.counts[endSeq] + 1
             self.n = self.n + 1
         except KeyError:
-            debug(f"Unknown downstream end: {downStreamEnd}")
-
-        try:
-            self.counts[upStreamEnd] = self.counts[upStreamEnd] + 1
-            self.n = self.n + 1
-        except KeyError:
-            debug(f"Unknown upstream end: {upStreamEnd}")
+            debug(f"Unknown read end: {endSeq}")
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):
@@ -48,24 +42,20 @@ class EndMotives(object):
         return motiveCountDict
 
     @classmethod
-    def get5primeFragmentEnds(cls, read, length):
+    def get5primeReadEnd(cls, read, length):
 
         # we only need the reference sequence to get the sequence
         alignedQuerySequence = read.query_alignment_sequence
 
-        downStream = alignedQuerySequence[0:length]
-        upStream = alignedQuerySequence[len(alignedQuerySequence) - length :]
+        # we need the downstream end for if its a forward read, and the upstream one for the
+        # reverse read
+        if read.is_reverse:
+            endSequence = alignedQuerySequence[len(alignedQuerySequence) - length :]
+            endSequence = reverseComplement(endSequence)
+        else:
+            endSequence = alignedQuerySequence[0:length]
 
-        # we do want the reverse complement of the upstream sequence to get the 5' of both ends
-        upStream = reverseComplement(upStream)
-
-        # now we check if there is a mismatch in the end sequences and set the and accordingly
-        if countLowerCase(downStream) != 0:
-            downStream = "mismatch"
-        if countLowerCase(upStream) != 0:
-            upStream = "mismatch"
-
-        return (downStream, upStream)
+        return endSequence
 
     def getFrequencies(self, refresh=False):
 
