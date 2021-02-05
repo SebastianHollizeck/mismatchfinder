@@ -22,9 +22,11 @@ class EndMotives(object):
 
         try:
             self.counts[endSeq] = self.counts[endSeq] + 1
-            self.n = self.n + 1
         except KeyError:
             debug(f"Unknown read end: {endSeq}")
+            self.counts["unknown"] = self.counts["unknown"] + 1
+
+        self.n = self.n + 1
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):
@@ -37,8 +39,8 @@ class EndMotives(object):
 
         debug(f"Created {len(motiveCountDict)} different end motives")
 
-        # we also add a count for how often we had a mismatch in the ends
-        motiveCountDict["mismatch"] = 0
+        # we also add a count for how often we found an end that we did not expect
+        motiveCountDict["unknown"] = 0
         return motiveCountDict
 
     @classmethod
