@@ -153,8 +153,10 @@ class BamScanner(Process):
                             nMisMatches += len(tmpMisMatches)
 
                         # even if the fragment doesnt have any mismatches it is important to
-                        # store the fragment length of this read for fragment size statistics
-                        fragLengths.append(abs(read.template_length))
+                        # store the fragment length of this read for fragment size statistics, but
+                        # only for the first read, because otherwise we just have everything twice
+                        if read.is_read1:
+                            fragLengths.append(abs(read.template_length))
 
                         # add the amount of bases of this read that were aligned
                         nAlignedBases += read.query_alignment_length
