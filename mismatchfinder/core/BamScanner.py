@@ -475,21 +475,20 @@ def hasMisMatches(read):
 
 def makeConsensusRead(read1, read2):
     # we get the overlapping parts of the reads
-    # store the original indexes for both reads
+    # get all the info we need from read1
     read1RefPos = read1.get_reference_positions(full_length=True)
     read1Seq = list(read1.query_sequence)
     read1Quals = read1.query_qualities
     read1IndDict = dict((k, i) for i, k in enumerate(read1RefPos))
-
+    # do the same with read 1
     read2RefPos = read2.get_reference_positions(full_length=True)
     read2Seq = list(read2.query_sequence)
     read2Quals = read2.query_qualities
     read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
-
-    # get the intersection
+    # get the intersection of the reference positions of the two reads
     inter = set(read1RefPos).intersection(read2RefPos)
 
-    # get the qualities for the sites
+    # go through all of the overlaps and decide which of the reads is better
     for pos in inter:
         # we might get a None, if there was softclipping, so we discard those
         if pos == None:
@@ -522,9 +521,9 @@ def makeConsensusRead(read1, read2):
     read1New = read1
     read1New.query_sequence = "".join(read1Seq)
     read1New.query_qualities = read1Quals
-
+    # same for read2
     read2New = read2
     read2New.query_sequence = "".join(read2Seq)
-    read1New.query_qualities = read1Quals
+    read2New.query_qualities = read2Quals
 
     return (read1New, read2New)
