@@ -315,7 +315,7 @@ class BamScanner(Process):
 
                 if contigPos > 13490 and contigPos < 13500:
                     print(
-                        f"readPos {readPos}\nlength of query_qualities={len(AlignedSegment.query_qualities)}\n we selected {qual} from\n {AlignedSegment.query_qualities}"
+                        f"readPos {readPos}\nlength of query_qualities={len(AlignedSegment.query_qualities)}\n we selected {qual} from\n {AlignedSegment.query_qualities}\n and the threshold is set as {self.minBQ}"
                     )
 
                 # if everything is right, we get the trinucl context of the mismatch in the reference
