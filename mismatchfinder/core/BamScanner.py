@@ -313,9 +313,6 @@ class BamScanner(Process):
                 if qual < self.minBQ:
                     continue
 
-                if contigPos == 826874:
-                    print(f"{AlignedSegment.query_qualities}\n {readPos} {qual}")
-
                 # if everything is right, we get the trinucl context of the mismatch in the reference
                 # and the query
                 altContext = AlignedSegment.query_alignment_sequence[
