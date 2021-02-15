@@ -2,6 +2,7 @@ import datetime
 from logging import debug, error, info, basicConfig, getLogger
 from multiprocessing import Process
 from sys import getsizeof
+from collections import defaultdict
 
 import pysam
 from numpy import array, quantile, sort
@@ -85,6 +86,9 @@ class BamScanner(Process):
             self.bamFilePath, "r", reference_filename=self.referenceFile
         )
 
+        # store the reads for which we do not have a partner yet
+        read_dict = defaultdict(lambda: [None, None])
+
         for read in bamFile.fetch(until_eof=True):
             nReads += 1
             # we check every 10K reads how uch time has passed and if it has been more than 30
@@ -126,45 +130,63 @@ class BamScanner(Process):
                 continue
             else:
 
-                # if we did get a blacklist and the read actually is within that region, we
-                # discard it and keep a count on how many we discarded
-                if not self.blackList is None and self.blackList.isWithinRegion(read):
-                    nBlackListedReads += 1
-
+                # if the read is properly paired, there is the chance of a
+                # overlap, so we instead store the read until we find the mate
+                # so that we can build a consensus
+                if read.is_proper_pair:
+                    if qname not in read_dict:
+                        read_dict[qname] = read
+                        continue
+                    else:
+                        read1, read2 = makeConsensusRead(read, read_dict[qname])
+                        del read_dict[qname]
+                        reads = list(read1, read2)
                 else:
-                    # only analyse read in the whitelist region if there is one
-                    if self.whiteList is None or self.whiteList.isReadWithinRegion(
+                    reads = list(read)
+
+                # now we execute this for the list of reads we created
+                for r in reads:
+                    # if we did get a blacklist and the read actually is within that region, we
+                    # discard it and keep a count on how many we discarded
+                    if not self.blackList is None and self.blackList.isWithinRegion(
                         read
                     ):
-                        # we only do our mismacth analysis if the read actually does have mismatches
-                        if not hasMisMatches(read):
-                            nNoMisMatchReads += 1
-                        else:
-                            # get all mismatches in this read
-                            tmpMisMatches = self.scanAlignedSegment(read)
-                            # store the mismatches and keep a record how often each was found
-                            for mm in tmpMisMatches:
-                                if mm in mutSites:
-                                    mutSites[mm] += 1
-                                else:
-                                    mutSites[mm] = 1
-                            # we also store the amount of mismatches found, so we can calculate
-                            # the mismatches per read which should be stable between samples
-                            nMisMatches += len(tmpMisMatches)
-
-                        # even if the fragment doesnt have any mismatches it is important to
-                        # store the fragment length of this read for fragment size statistics, but
-                        # only for the first read, because otherwise we just have everything twice
-                        if read.is_read1:
-                            fragLengths.append(abs(read.template_length))
-
-                        # add the amount of bases of this read that were aligned
-                        nAlignedBases += read.query_alignment_length
-
-                        # we also care about the endmotives of the reads, so we store those
-                        self.endMotives.count(read)
-                    else:
                         nBlackListedReads += 1
+
+                    else:
+                        # only analyse read in the whitelist region if there is one
+                        if self.whiteList is None or self.whiteList.isReadWithinRegion(
+                            r
+                        ):
+                            # we only do our mismacth analysis if the read actually does have mismatches
+                            if not hasMisMatches(r):
+                                nNoMisMatchReads += 1
+                            else:
+                                # get all mismatches in this read
+                                tmpMisMatches = self.scanAlignedSegment(r)
+                                # store the mismatches and keep a record how often each was found
+                                for mm in tmpMisMatches:
+                                    if mm in mutSites:
+                                        mutSites[mm] += 1
+                                    else:
+                                        mutSites[mm] = 1
+                                # we also store the amount of mismatches found, so we can calculate
+                                # the mismatches per read which should be stable between samples
+                                nMisMatches += len(tmpMisMatches)
+
+                            # even if the fragment doesnt have any mismatches it is important to
+                            # store the fragment length of this read for fragment size statistics, but
+                            # only for the first read, because otherwise we just have everything twice
+                            if r.is_read1:
+                                fragLengths.append(abs(r.template_length))
+
+                            # add the amount of bases of this read that were aligned
+                            nAlignedBases += r.query_alignment_length
+
+                            # we also care about the endmotives of the reads, so we store those
+                            self.endMotives.count(r)
+                        else:
+                            nBlackListedReads += 1
 
         # we are done so we update the status as well
 
@@ -449,3 +471,45 @@ def hasMisMatches(read):
         # but if there is a ValueError we know there is more in there than that (could be an indel
         # as well, but we have to look closer to actually check that)
         return True
+
+
+def makeConsensusRead(read1, read2):
+    # we get the overlapping parts of the reads
+    # store the original indexes for both reads
+    read1RefPos = read1.get_reference_positions(full_length=True)
+    read1Seq = list(read1.query_sequence)
+    read1Quals = read1.query_qualities
+    read1IndDict = dict((k, i) for i, k in enumerate(read1RefPos))
+
+    read2RefPos = read2.get_reference_positions(full_length=True)
+    read2Seq = list(read2.query_sequence)
+    read2Quals = read2.query_qualities
+    read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
+
+    # get the intersection
+    inter = set(read1RefPos).intersection(read2RefPos)
+
+    # get the qualities for the sites
+    for pos in inter:
+        # we might get a None, if there was softclipping, so we discard those
+        if pos == None:
+            continue
+
+        # we only really care if there is a difference in the sequence
+        if read1Seq[read1IndDict[pos]] != read2Seq[read2IndDict[pos]]:
+            # now we have to find out which of them has the higher qual and adjust the other by it
+            if read1Quals[read1IndDict[pos]] >= read2Quals[read2IndDict[pos]]:
+                read2Seq[read2IndDict[pos]] = read1Seq[read1IndDict[pos]]
+            if read1Quals[read1IndDict[pos]] < read2Quals[read2IndDict[pos]]:
+                read1Seq[read2IndDict[pos]] = read2Seq[read1IndDict[pos]]
+
+    # finally we have to create new reads
+    read1New = read1
+    read1New.query_sequence = "".join(read1Seq)
+    read1New.query_qualities = read1Quals
+
+    read2New = read2
+    read2New.query_sequence = "".join(read2Seq)
+    read1New.query_qualities = read1Quals
+
+    return (read1, read2)
