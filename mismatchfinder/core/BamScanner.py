@@ -310,7 +310,7 @@ class BamScanner(Process):
                 # we really only want high quality mismatches
                 qual = AlignedSegment.query_qualities[readPos]
 
-                if contigPos == 139502:
+                if contigPos == 13498:
                     print(
                         f"readPos {readPos}\nlength of query_qualities={len(AlignedSegment.query_qualities)}\n we selected {qual}"
                     )
