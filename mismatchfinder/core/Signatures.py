@@ -133,6 +133,9 @@ class Signature(object):
             elif len(countsTable.index) == 0:
                 error(f"File {file} did not contain any data")
                 raise Exception(f"File {file} did not contain any data")
+            elif (countsTable.values == 0).all:
+                error(f"File {file} did not contain any non zero counts")
+                return DataFrame()
 
         if method == "QP":
             sigWeights = self.whichSignaturesQP(countsTable.values)
