@@ -313,7 +313,7 @@ class BamScanner(Process):
                 if qual < self.minBQ:
                     continue
 
-                if contigPos > 13490 and contigPos < 13500:
+                if contigPos > 138770 and contigPos < 138780:
                     print(
                         f"contigPos {contigPos}\n"
                         f"readPos {readPos}\n"
