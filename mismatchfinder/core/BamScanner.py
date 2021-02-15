@@ -141,7 +141,7 @@ class BamScanner(Process):
                             nNoMisMatchReads += 1
                         else:
                             # get all mismatches in this read
-                            tmpMisMatches = self.scanAlignedSegment(read, self.minBQ)
+                            tmpMisMatches = self.scanAlignedSegment(read)
                             # store the mismatches and keep a record how often each was found
                             for mm in tmpMisMatches:
                                 if mm in mutSites:
@@ -286,7 +286,7 @@ class BamScanner(Process):
 
     # read through one read and find all mismatches and their contexts
     # can visualize the contexts on the reads
-    def scanAlignedSegment(self, AlignedSegment, qualThreshold=21, vis=False):
+    def scanAlignedSegment(self, AlignedSegment, vis=False):
 
         # this is where we will store the sites we find in this read
         mutations = []
@@ -309,7 +309,7 @@ class BamScanner(Process):
 
                 # we really only want high quality mismatches
                 qual = AlignedSegment.query_qualities[readPos]
-                if qual < qualThreshold:
+                if qual < self.minBQ:
                     continue
 
                 # if everything is right, we get the trinucl context of the mismatch in the reference
@@ -410,6 +410,7 @@ class BamScanner(Process):
                     mut
                 ):
                     # add to the found mutations now that everything is sorted out
+                    print(qual)
                     mutations.append(mut)
 
         return mutations
