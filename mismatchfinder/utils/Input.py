@@ -33,14 +33,14 @@ class InputParser(object):
             "-g", "--germline", help="source of germline variants to filter"
         )
         parser.add_argument(
-            "-q",
+            "-Q",
             "--baseQuality",
             help="min base quality required to be counted as a variant",
             type=int,
             default=25,
         )
         parser.add_argument(
-            "-Q",
+            "-q",
             "--mappingQuality",
             help="min mapping quality required for a read to be included",
             type=int,
