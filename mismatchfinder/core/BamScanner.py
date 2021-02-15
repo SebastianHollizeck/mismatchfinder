@@ -494,14 +494,29 @@ def makeConsensusRead(read1, read2):
         # we might get a None, if there was softclipping, so we discard those
         if pos == None:
             continue
-
+        read1IntPos = read1IndDict[pos]
+        read2IntPos = read2IndDict[pos]
         # we only really care if there is a difference in the sequence
-        if read1Seq[read1IndDict[pos]] != read2Seq[read2IndDict[pos]]:
+        if read1Seq[read1IntPos] != read2Seq[read2IntPos]:
             # now we have to find out which of them has the higher qual and adjust the other by it
-            if read1Quals[read1IndDict[pos]] >= read2Quals[read2IndDict[pos]]:
-                read2Seq[read2IndDict[pos]] = read1Seq[read1IndDict[pos]]
-            if read1Quals[read1IndDict[pos]] < read2Quals[read2IndDict[pos]]:
-                read1Seq[read2IndDict[pos]] = read2Seq[read1IndDict[pos]]
+            if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
+                read2Seq[read2IntPos] = read1Seq[read1IntPos]
+                read2Quals[read2IntPos] = read1Quals[read1IntPos]
+            elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
+                read1Seq[read1IntPos] = read2Seq[read2IntPos]
+                read1Quals[read1IntPos] = read2Quals[read2IntPos]
+            else:
+                # this is the case where both are likely, in this case we just
+                # use the reference that one of them hopefully has?
+                if read1Seq[read1IntPos] == "." or read1Seq[read1IntPos] == ",":
+                    read2Seq[read2IntPos] = read1Seq[read1IntPos]
+                    read2Quals[read2IntPos] = read1Quals[read1IntPos]
+                elif read2Seq[read2IntPos] == "." or read2Seq[read2IntPos] == ",":
+                    read1Seq[read1IntPos] = read2Seq[read2IntPos]
+                    read1Quals[read1IntPos] = read2Quals[read2IntPos]
+                else:
+                    # at this point we just take whatever they say
+                    pass
 
     # finally we have to create new reads
     read1New = read1
@@ -512,4 +527,4 @@ def makeConsensusRead(read1, read2):
     read2New.query_sequence = "".join(read2Seq)
     read1New.query_qualities = read1Quals
 
-    return (read1, read2)
+    return (read1New, read2New)
