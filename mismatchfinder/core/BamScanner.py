@@ -309,6 +309,7 @@ class BamScanner(Process):
 
                 # we really only want high quality mismatches
                 qual = AlignedSegment.query_qualities[readPos]
+                print(f"{AlignedSegment.query_qualities} {readPos} {qual}")
                 if qual < self.minBQ:
                     continue
 
@@ -410,7 +411,6 @@ class BamScanner(Process):
                     mut
                 ):
                     # add to the found mutations now that everything is sorted out
-                    print(qual)
                     mutations.append(mut)
 
         return mutations
