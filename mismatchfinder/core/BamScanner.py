@@ -302,28 +302,31 @@ class BamScanner(Process):
 
             # if it is lower case it symbolises a mismatch
             if seq.islower():
+
+                # we really only want high quality mismatches
+                # we need to do this before we do the softclip adjustment
+                # because the base qualities are not soft clipped
+                qual = AlignedSegment.query_qualities[readPos]
+
                 # offset the soft cliping at the beginning
                 readPos = readPos - AlignedSegment.query_alignment_start
                 # offset the reference location
                 templatePos = contigPos - AlignedSegment.reference_start
 
-                # we really only want high quality mismatches
-                qual = AlignedSegment.query_qualities[readPos]
-
                 if qual < self.minBQ:
                     continue
 
-                if contigPos > 138770 and contigPos < 138780:
-                    print(
-                        f"contigPos {contigPos}\n"
-                        f"readPos {readPos}\n"
-                        f"length of query_qualities={len(AlignedSegment.query_qualities)}\n"
-                        f" we selected {qual} from\n"
-                        f"{AlignedSegment.query_alignment_sequence}\n"
-                        f"{AlignedSegment.query_qualities}\n"
-                        f"and the threshold is set as {self.minBQ}\n"
-                        f"{AlignedSegment}"
-                    )
+                # if contigPos > 138770 and contigPos < 138780:
+                #     print(
+                #         f"contigPos {contigPos}\n"
+                #         f"readPos {readPos}\n"
+                #         f"length of query_qualities={len(AlignedSegment.query_qualities)}\n"
+                #         f" we selected {qual} from\n"
+                #         f"{AlignedSegment.query_alignment_sequence}\n"
+                #         f"{AlignedSegment.query_qualities}\n"
+                #         f"and the threshold is set as {self.minBQ}\n"
+                #         f"{AlignedSegment}"
+                #     )
 
                 # if everything is right, we get the trinucl context of the mismatch in the reference
                 # and the query
