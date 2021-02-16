@@ -142,9 +142,10 @@ class BamScanner(Process):
                         read1, read2 = makeConsensusRead(read, read_dict[qname])
 
                         del read_dict[qname]
-                        reads = list(read1, read2)
+                        reads = [read1, read2]
                 else:
-                    reads = list(read)
+                    # if its not a proper pair, we just use it as is
+                    reads = [read]
 
                 # now we execute this for the list of reads we created
                 for r in reads:
