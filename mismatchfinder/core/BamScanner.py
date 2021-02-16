@@ -133,6 +133,7 @@ class BamScanner(Process):
                 # if the read is properly paired, there is the chance of a
                 # overlap, so we instead store the read until we find the mate
                 # so that we can build a consensus
+                qname = read.query_name
                 if read.is_proper_pair:
                     if qname not in read_dict:
                         read_dict[qname] = read
