@@ -181,6 +181,11 @@ class BamScanner(Process):
                             # only for the first read, because otherwise we just have everything twice
                             if not r.is_paired or r.is_read1:
                                 fragLengths.append(abs(r.template_length))
+                            # single end reads will not have a template length
+                            # that is meaningfull for us, but its good to have
+                            # the info that it was single end in the final
+                            # result as
+                            # (number discordant reads == number of reads)
 
                             # add the amount of bases of this read that were aligned
                             nAlignedBases += r.query_alignment_length
@@ -329,7 +334,10 @@ class BamScanner(Process):
             if seq.islower():
 
                 # because we might have deleted this by creating a consensus, we check if the query_sequence is equal to what we actually have
-                # @TODO: proper fix for MD tag when building consense?
+                # @TODO: proper fix for MD tag when building consensus, because
+                # that would remove the need of this tag alternatively, build
+                # our own class, which holds all the info we need and we can
+                # manipulate
                 if seq.upper() == AlignedSegment.query_sequence[readPos]:
                     # # need to fix this, because the ref is calculated from
                     # the MD string which we kinda fucked up by changing
@@ -534,11 +542,19 @@ def makeConsensusRead(read1, read2):
             else:
                 # this is the case where both are likely, in this case we just
                 # use the reference that one of them hopefully has?
-                if read1Seq[read1IntPos] == "." or read1Seq[read1IntPos] == ",":
-                    read2Seq[read2IntPos] = read1Seq[read1IntPos]
+
+                # this is the ref base of read1, we can use either, because we
+                # know they overlap here, but we need to make it upper, because
+                # if read1 is the one with the mismatch we get a lowercase
+                refBase = read1.get_reference_sequence()[
+                    (read1IntPos - read1.query_alignment_start)
+                ].upper()
+
+                if read1Seq[read1IntPos] == refBase:
+                    read2Seq[read2IntPos] = refBase
                     read2Quals[read2IntPos] = read1Quals[read1IntPos]
-                elif read2Seq[read2IntPos] == "." or read2Seq[read2IntPos] == ",":
-                    read1Seq[read1IntPos] = read2Seq[read2IntPos]
+                elif read2Seq[read2IntPos] == refBase:
+                    read1Seq[read1IntPos] = refBase
                     read1Quals[read1IntPos] = read2Quals[read2IntPos]
                 else:
                     # at this point we just take whatever they say
