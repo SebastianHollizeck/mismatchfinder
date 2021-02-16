@@ -326,6 +326,11 @@ class BamScanner(Process):
             # if it is lower case it symbolises a mismatch
             if seq.islower():
 
+                # because we might have deleted this by creating a consensus, we check if the query_sequence is equal to what we actually have
+                # @TODO: proper fix for MD tag when building consense?
+                if seq.upper() == AlignedSegment.query_sequence:
+                    continue
+
                 # we really only want high quality mismatches
                 # we need to do this before we do the softclip adjustment
                 # because the base qualities are not soft clipped
