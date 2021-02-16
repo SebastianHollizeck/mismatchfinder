@@ -336,13 +336,13 @@ class BamScanner(Process):
                     tmpRef = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
 
+                    debug(
+                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {seq} to {seq.upper()} after read error correction\n{refIndDict[contigPos]} is contigPos {contigPos}\n{AlignedSegment.query_sequence[readPos]}"
+                    )
                     tmpRef[refIndDict[contigPos]] = tmpRef[
                         refIndDict[contigPos]
                     ].upper()
 
-                    debug(
-                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmpRef[refIndDict[contigPos]]} to {seq.upper()} after read error correction"
-                    )
                     alignedRefSequence = "".join(tmpRef)
                     # but then we just skipr this corrected snp
                     continue
