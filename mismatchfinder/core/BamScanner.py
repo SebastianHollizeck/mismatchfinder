@@ -210,7 +210,7 @@ class BamScanner(Process):
         fragLengths = array(sort(fragLengths))
 
         # we get the middle of the array, which should be the median of the distribution
-        median = fragLengths[int(nAlignedReads / 2)]
+        median = fragLengths[int(len(fragLengths) / 2)]
 
         # find the index, at which the read distance gets to normal amounts
         lowSizeIdx = -1
