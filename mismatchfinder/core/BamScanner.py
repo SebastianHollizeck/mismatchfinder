@@ -339,7 +339,10 @@ class BamScanner(Process):
                         tmp[mappedPos] = tmp[mappedPos].upper()
                         alignedRefSequence = "".join(tmp)
                     except IndexError as e:
-                        info(f"{mappedPos} is somehow out of index?")
+                        mdStr = AlignedSegment.get_tag("MD")
+                        info(
+                            f"{mappedPos} is somehow out of index? {mdStr}\n{AlignedSegment.query_alignment_start}"
+                        )
 
                     continue
 
