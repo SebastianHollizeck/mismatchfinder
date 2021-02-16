@@ -333,7 +333,7 @@ class BamScanner(Process):
                     tmp = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
                     debug(
-                        f"exchanging {tmp[mappedPos]} with {seq.upper()} after read error correction"
+                        f"correcting pos {mappedPos} of read {read.qname} from {tmp[mappedPos]} to {seq.upper()} after read error correction"
                     )
                     tmp[mappedPos] = tmp[mappedPos].upper()
                     alignedRefSequence = "".join(tmp)
