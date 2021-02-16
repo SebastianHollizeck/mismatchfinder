@@ -214,7 +214,7 @@ class BamScanner(Process):
 
         # find the index, at which the read distance gets to normal amounts
         lowSizeIdx = -1
-        for i in range(0, nAlignedReads):
+        for i in range(0, len(fragLengths)):
             if fragLengths[i] < 35:
                 lowSizeIdx = i
             else:
@@ -222,7 +222,7 @@ class BamScanner(Process):
 
         # find the index, at which the read distance gets to normal amounts
         highSizeIdx = -1
-        for i in range(nAlignedReads - 1, 0, -1):
+        for i in range((len(fragLengths) - 1), 0, -1):
             if fragLengths[i] > 1500:
                 highSizeIdx = i
             else:
