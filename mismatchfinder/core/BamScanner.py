@@ -139,6 +139,7 @@ class BamScanner(Process):
                         continue
                     else:
                         read1, read2 = makeConsensusRead(read, read_dict[qname])
+
                         del read_dict[qname]
                         reads = list(read1, read2)
                 else:
@@ -148,9 +149,7 @@ class BamScanner(Process):
                 for r in reads:
                     # if we did get a blacklist and the read actually is within that region, we
                     # discard it and keep a count on how many we discarded
-                    if not self.blackList is None and self.blackList.isWithinRegion(
-                        read
-                    ):
+                    if not self.blackList is None and self.blackList.isWithinRegion(r):
                         nBlackListedReads += 1
 
                     else:
@@ -474,6 +473,7 @@ def hasMisMatches(read):
 
 
 def makeConsensusRead(read1, read2):
+    debug("Found proper pair, attemping to build consensus")
     # we get the overlapping parts of the reads
     # get all the info we need from read1
     read1RefPos = read1.get_reference_positions(full_length=True)
@@ -497,6 +497,9 @@ def makeConsensusRead(read1, read2):
         read2IntPos = read2IndDict[pos]
         # we only really care if there is a difference in the sequence
         if read1Seq[read1IntPos] != read2Seq[read2IntPos]:
+            debug(
+                "Found inconsistency between the reads, adjusting sequence of lower quality base"
+            )
             # now we have to find out which of them has the higher qual and adjust the other by it
             if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
                 read2Seq[read2IntPos] = read1Seq[read1IntPos]
