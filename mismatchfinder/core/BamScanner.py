@@ -180,6 +180,10 @@ class BamScanner(Process):
                             # only for the first read, because otherwise we just have everything twice
                             if r.is_read1:
                                 fragLengths.append(abs(r.template_length))
+                            elif r.is_read2:
+                                pass
+                            else:
+                                print(f"what is this shit here? {r}")
 
                             # add the amount of bases of this read that were aligned
                             nAlignedBases += r.query_alignment_length
