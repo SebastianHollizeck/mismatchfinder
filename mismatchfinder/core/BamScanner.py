@@ -331,10 +331,13 @@ class BamScanner(Process):
                 if seq.upper() == AlignedSegment.query_sequence[readPos]:
                     # then we also fix the ref
                     tmp = list(alignedRefSequence)
-                    tmp[readPos - AlignedSegment.query_alignment_start] = tmp[
-                        readPos - AlignedSegment.query_alignment_start
-                    ].upper()
+                    mappedPos = readPos - AlignedSegment.query_alignment_start
+                    print(mappedPos)
+                    print(len(tmp))
+                    print(readPos)
+                    tmp[mappedPos] = tmp[mappedPos].upper()
                     alignedRefSequence = "".join(tmp)
+
                     continue
 
                 # we really only want high quality mismatches
