@@ -317,7 +317,9 @@ class BamScanner(Process):
         # we do this here, so we only do it once instead of in the loop
         alignedRefSequence = AlignedSegment.get_reference_sequence()
         referencePositions = AlignedSegment.get_reference_positions(full_length=True)
-        refIndDict = dict((k, i) for i, k in enumerate(referencePositions))
+        refIndDict = dict(
+            (k, i) for i, k in enumerate(AlignedSegment.get_reference_positions())
+        )
 
         # loop through the read
         for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
