@@ -330,18 +330,18 @@ class BamScanner(Process):
                 # @TODO: proper fix for MD tag when building consense?
                 if seq.upper() == AlignedSegment.query_sequence[readPos]:
                     # then we also fix the ref
-                    tmp = list(alignedRefSequence)
+                    tmpRef = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
                     try:
                         debug(
-                            f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmp[mappedPos]} to {seq.upper()} after read error correction"
+                            f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmpRef[mappedPos]} to {seq.upper()} after read error correction"
                         )
-                        tmp[mappedPos] = tmp[mappedPos].upper()
-                        alignedRefSequence = "".join(tmp)
+                        tmpRef[mappedPos] = tmpRef[mappedPos].upper()
+                        alignedRefSequence = "".join(tmpRef)
                     except IndexError as e:
                         mdStr = AlignedSegment.get_tag("MD")
                         info(
-                            f"{mappedPos} is somehow out of index? {mdStr}\n{AlignedSegment.query_alignment_start}"
+                            f"{mappedPos} is somehow out of index? {mdStr}\n{AlignedSegment.query_alignment_start}\n{tmpRef}, {len(tmpRef)}"
                         )
 
                     continue
