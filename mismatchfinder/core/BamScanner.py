@@ -329,6 +329,12 @@ class BamScanner(Process):
                 # because we might have deleted this by creating a consensus, we check if the query_sequence is equal to what we actually have
                 # @TODO: proper fix for MD tag when building consense?
                 if seq.upper() == AlignedSegment.query_sequence[readPos]:
+                    # then we also fix the ref
+                    tmp = list(alignedRefSequence)
+                    tmp[readPos - AlignedSegment.query_alignment_start] = tmp[
+                        readPos - AlignedSegment.query_alignment_start
+                    ].upper()
+                    alignedRefSequence = "".join(tmp)
                     continue
 
                 # we really only want high quality mismatches
