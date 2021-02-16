@@ -317,6 +317,7 @@ class BamScanner(Process):
         # we do this here, so we only do it once instead of in the loop
         alignedRefSequence = AlignedSegment.get_reference_sequence()
         referencePositions = AlignedSegment.get_reference_positions(full_length=True)
+        refIndDict = dict((k, i) for i, k in enumerate(referencePositions))
 
         # loop through the read
         for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
@@ -329,21 +330,21 @@ class BamScanner(Process):
                 # because we might have deleted this by creating a consensus, we check if the query_sequence is equal to what we actually have
                 # @TODO: proper fix for MD tag when building consense?
                 if seq.upper() == AlignedSegment.query_sequence[readPos]:
-                    # then we also fix the ref
+                    # # need to fix this, because the ref is calculated from
+                    # the MD string which we kinda fucked up by changing
+                    # the sequence
                     tmpRef = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
-                    try:
-                        debug(
-                            f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmpRef[mappedPos]} to {seq.upper()} after read error correction"
-                        )
-                        tmpRef[mappedPos] = tmpRef[mappedPos].upper()
-                        alignedRefSequence = "".join(tmpRef)
-                    except IndexError as e:
-                        mdStr = AlignedSegment.get_tag("MD")
-                        info(
-                            f"{mappedPos} is somehow out of index? {mdStr}\n{AlignedSegment.query_alignment_start}\n{tmpRef}, {len(tmpRef)}, {len(AlignedSegment.query_alignment_sequence)}"
-                        )
 
+                    tmpRef[refIndDict[contigPos]] = tmpRef[
+                        refIndDict[contigPos]
+                    ].upper()
+
+                    debug(
+                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmpRef[refIndDict[contigPos]]} to {seq.upper()} after read error correction"
+                    )
+                    alignedRefSequence = "".join(tmpRef)
+                    # but then we just skipr this corrected snp
                     continue
 
                 # we really only want high quality mismatches
