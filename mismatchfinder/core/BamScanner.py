@@ -339,7 +339,7 @@ class BamScanner(Process):
                     mappedPos = readPos - AlignedSegment.query_alignment_start
                     mdStr = AlignedSegment.get_tag("MD")
                     debug(
-                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction\n{refIndDict[contigPos]} is contigPos {contigPos}\n{AlignedSegment.query_sequence[readPos]}"
+                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
                     )
                     tmpRef[refIndDict[contigPos]] = tmpRef[
                         refIndDict[contigPos]
