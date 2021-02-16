@@ -73,6 +73,7 @@ class BamScanner(Process):
         nBlackListedReads = 0
         nMisMatches = 0
         nAlignedBases = 0
+        nAlignedReads = 0
 
         # store the fragment lengths for later
         fragLengths = []
@@ -178,15 +179,12 @@ class BamScanner(Process):
                             # even if the fragment doesnt have any mismatches it is important to
                             # store the fragment length of this read for fragment size statistics, but
                             # only for the first read, because otherwise we just have everything twice
-                            if r.is_read1:
+                            if not r.is_paired or r.is_read1:
                                 fragLengths.append(abs(r.template_length))
-                            elif r.is_read2:
-                                pass
-                            else:
-                                print(f"what is this shit here? {r}")
 
                             # add the amount of bases of this read that were aligned
                             nAlignedBases += r.query_alignment_length
+                            nAlignedReads += 1
 
                             # we also care about the endmotives of the reads, so we store those
                             self.endMotives.count(r)
@@ -200,14 +198,11 @@ class BamScanner(Process):
         )
 
         # did we have an issue with reads?
-        if len(fragLengths) == 0:
+        if nAlignedBases == 0:
             self.logger.error(
                 f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}"
             )
             raise Exception(f"No reads left for {self.bamFilePath}")
-
-        # we use fragLengths here, because it already contains all aligned reads
-        nAlignedReads = len(fragLengths)
 
         # sort the fragment lengths so we can get the median and the sides of the distribution for
         # estimation of fusions or similar (because those would have higher fragment lengths as
