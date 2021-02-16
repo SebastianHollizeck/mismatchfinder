@@ -332,11 +332,14 @@ class BamScanner(Process):
                     # then we also fix the ref
                     tmp = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
-                    debug(
-                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmp[mappedPos]} to {seq.upper()} after read error correction"
-                    )
-                    tmp[mappedPos] = tmp[mappedPos].upper()
-                    alignedRefSequence = "".join(tmp)
+                    try:
+                        debug(
+                            f"correcting pos {mappedPos} of read {AlignedSegment.qname} from {tmp[mappedPos]} to {seq.upper()} after read error correction"
+                        )
+                        tmp[mappedPos] = tmp[mappedPos].upper()
+                        alignedRefSequence = "".join(tmp)
+                    except IndexError as e:
+                        info(f"{mappedPos} is somehow out of index?")
 
                     continue
 
