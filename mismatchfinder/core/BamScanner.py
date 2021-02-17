@@ -535,11 +535,12 @@ def makeConsensusRead(read1, read2):
                 # this is the ref base of read1, we can use either, because we
                 # know they overlap here, but we need to make it upper, because
                 # if read1 is the one with the mismatch we get a lowercase
-                for (readPos, contigPos) in read1.get_aligned_pairs():
+                for (readPos, contigPos, refBase) in read1.get_aligned_pairs(
+                    with_seq=True, matches_only=True
+                ):
                     if contigPos == pos:
+                        refBase = refBase.upper()
                         break
-                print(f"{readPos}, {read1}, {read1.get_reference_sequence()}")
-                refBase = read1.get_reference_sequence()[readPos].upper()
 
                 if read1Seq[read1IntPos] == refBase:
                     read2Seq[read2IntPos] = refBase
