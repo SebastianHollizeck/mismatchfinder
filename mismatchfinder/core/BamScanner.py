@@ -538,7 +538,7 @@ def makeConsensusRead(read1, read2):
                 for (readPos, contigPos) in read1.get_aligned_pairs():
                     if contigPos == pos:
                         break
-
+                print(f"{readPos}, {read1}, {read1.get_reference_sequence()}")
                 refBase = read1.get_reference_sequence()[readPos].upper()
 
                 if read1Seq[read1IntPos] == refBase:
