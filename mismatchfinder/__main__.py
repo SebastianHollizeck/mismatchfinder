@@ -57,6 +57,9 @@ def main():
     tumourResults = SimpleQueue()
     normalResults = SimpleQueue()
 
+    logger.info(
+        f"Starting analysis with min base quality: {inputs.minBQ} and min mapping quality: {inputs.minMQ}"
+    )
     # spawn processes to analyse each bam individually
     for bam in inputs.bamFiles:
         p = BamScanner(

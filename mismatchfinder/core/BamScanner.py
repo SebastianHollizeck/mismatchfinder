@@ -361,25 +361,14 @@ class BamScanner(Process):
                 # because the base qualities are not soft clipped
                 qual = AlignedSegment.query_qualities[readPos]
 
+                # if the quality of the base is too low, we drop this
+                if qual < self.minBQ:
+                    continue
+
                 # offset the soft cliping at the beginning
                 readPos = readPos - AlignedSegment.query_alignment_start
                 # offset the reference location
                 templatePos = contigPos - AlignedSegment.reference_start
-
-                if qual < self.minBQ:
-                    continue
-
-                # if contigPos > 138770 and contigPos < 138780:
-                #     print(
-                #         f"contigPos {contigPos}\n"
-                #         f"readPos {readPos}\n"
-                #         f"length of query_qualities={len(AlignedSegment.query_qualities)}\n"
-                #         f" we selected {qual} from\n"
-                #         f"{AlignedSegment.query_alignment_sequence}\n"
-                #         f"{AlignedSegment.query_qualities}\n"
-                #         f"and the threshold is set as {self.minBQ}\n"
-                #         f"{AlignedSegment}"
-                #     )
 
                 # if everything is right, we get the trinucl context of the mismatch in the reference
                 # and the query
@@ -546,9 +535,11 @@ def makeConsensusRead(read1, read2):
                 # this is the ref base of read1, we can use either, because we
                 # know they overlap here, but we need to make it upper, because
                 # if read1 is the one with the mismatch we get a lowercase
-                refBase = read1.get_reference_sequence()[
-                    (read1IntPos - read1.query_alignment_start)
-                ].upper()
+                for (readpos, contigPos) in read1.get_aligned_pairs():
+                    if contigPos == pos:
+                        break
+
+                refBase = read1.get_reference_sequence()[readPos].upper()
 
                 if read1Seq[read1IntPos] == refBase:
                     read2Seq[read2IntPos] = refBase
