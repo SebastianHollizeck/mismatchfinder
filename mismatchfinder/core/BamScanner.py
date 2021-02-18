@@ -521,16 +521,22 @@ def makeConsensusRead(read1, read2):
         read2IntPos = read2IndDict[pos]
         # we only really care if there is a difference in the sequence
         if read1Seq[read1IntPos] != read2Seq[read2IntPos]:
-            # debug(
-            #     "Found inconsistency between the reads, adjusting sequence of lower quality base"
-            # )
-            # now we have to find out which of them has the higher qual and adjust the other by it
+
+            # we see which has the higher quality and then take that as the ground truth, but also
+            # we try to avoid counting the overlap twice by reducing the quality of the other to 0
+            # but also, because they did not agree, we slightly reduce the quality of the kept read
             if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
                 read2Seq[read2IntPos] = read1Seq[read1IntPos]
-                read2Quals[read2IntPos] = read1Quals[read1IntPos]
+                read1Quals[read1IntPos] = read1Quals[read1IntPos] - (
+                    read2Quals[read2IntPos] / 2
+                )
+                read2Quals[read2IntPos] = 0
             elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
                 read1Seq[read1IntPos] = read2Seq[read2IntPos]
-                read1Quals[read1IntPos] = read2Quals[read2IntPos]
+                read2Quals[read2IntPos] = read2Quals[read2IntPos] - (
+                    read1Quals[read1IntPos] / 2
+                )
+                read1Quals[read1IntPos] = 0
             else:
                 # this is the case where both are likely, in this case we just
                 # use the reference that one of them hopefully has?
@@ -569,6 +575,15 @@ def makeConsensusRead(read1, read2):
                 else:
                     # at this point we just take whatever they say
                     pass
+        else:
+            # this is a quick and ugly fix to not count mismatches from the two reads corresponding
+            # to one dna fragment twice. If both reads are reference, we dont care anyways, but if
+            # both show a mismatch, we only want to count one
+            if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
+                read2Quals[read2IntPos] = 0
+            elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
+                read1Seq[read1IntPos] = read2Seq[read2IntPos]
+                read1Quals[read1IntPos] = 0
 
     # finally we have to create new reads
     read1New = read1
