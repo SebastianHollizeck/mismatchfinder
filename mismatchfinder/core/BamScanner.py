@@ -545,7 +545,7 @@ def makeConsensusRead(read1, read2):
                         if contigPos == pos:
                             refBase = refBase.upper()
                             break
-                except KeyError:
+                except ValueError:
                     # this shoudl actually never happen
                     error(f"unmapped read in consensus analysis\n{read1}")
                     return (read1, read2)
