@@ -538,17 +538,27 @@ def makeConsensusRead(read1, read2):
                 # this is the ref base of read1, we can use either, because we
                 # know they overlap here, but we need to make it upper, because
                 # if read1 is the one with the mismatch we get a lowercase
+
+                # we kinda use this to check if an md string is present
+                readForBase = None
                 try:
-                    for (readPos, contigPos, refBase) in read1.get_aligned_pairs(
-                        with_seq=True, matches_only=True
-                    ):
-                        if contigPos == pos:
-                            refBase = refBase.upper()
-                            break
-                except ValueError:
-                    # this shoudl actually never happen
-                    error(f"unmapped read in consensus analysis\n{read1}")
-                    return (read1, read2)
+                    read1.get_tag("MD")
+                    readForBase = read1
+                except KeyError:
+                    # now we try the seond read
+                    try:
+                        read2.get_tag("MD")
+                        readForBase = read2
+                    except KeyError:
+                        # well, we tried without an md str we cant build a consensus
+                        return (read1, read2)
+
+                for (readPos, contigPos, refBase) in readForBase.get_aligned_pairs(
+                    with_seq=True, matches_only=True
+                ):
+                    if contigPos == pos:
+                        refBase = refBase.upper()
+                        break
 
                 if read1Seq[read1IntPos] == refBase:
                     read2Seq[read2IntPos] = refBase
