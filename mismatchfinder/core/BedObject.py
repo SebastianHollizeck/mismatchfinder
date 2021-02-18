@@ -107,7 +107,7 @@ class BedObject(object):
                 )
             )
         except KeyError:
-            return false
+            return False
 
         # and now we decide if there was an overlap
         if len(bedIt) > 0:
