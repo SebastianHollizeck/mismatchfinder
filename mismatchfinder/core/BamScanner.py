@@ -579,7 +579,7 @@ def makeConsensusRead(read1, read2):
             # this is a quick and ugly fix to not count mismatches from the two reads corresponding
             # to one dna fragment twice. If both reads are reference, we dont care anyways, but if
             # both show a mismatch, we only want to count one
-            if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
+            if read1Quals[read1IntPos] >= read2Quals[read2IntPos]:
                 read2Quals[read2IntPos] = 0
             elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
                 read1Seq[read1IntPos] = read2Seq[read2IntPos]
