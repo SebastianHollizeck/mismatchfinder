@@ -152,7 +152,10 @@ class BamScanner(Process):
                 for r in reads:
                     # if we did get a blacklist and the read actually is within that region, we
                     # discard it and keep a count on how many we discarded
-                    if not self.blackList is None and self.blackList.isWithinRegion(r):
+                    if (
+                        not self.blackList is None
+                        and self.blackList.isReadWithinRegion(r)
+                    ):
                         nBlackListedReads += 1
 
                     else:
