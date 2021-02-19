@@ -64,7 +64,12 @@ class Fragment(object):
 
             # now we try to combine the results of the two reads
             # we throw all ref positions into one pot to genrate one hybrid read
-            refPosJoined = sort(union1d(r1RefPos, r2RefPos))
+            refPosJoined = sort(
+                union1d(
+                    array(list(r1RefSeq), dtype=int32),
+                    array(list(r2RefSeq), dtype=int32),
+                )
+            )
             querySeqJoined = empty(len(refPosJoined), dtype=str)
             queryQualJoined = empty(len(refPosJoined), dtype=int32)
             refSeqJoined = empty(len(refPosJoined), dtype=str)
