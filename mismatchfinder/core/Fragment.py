@@ -26,7 +26,7 @@ class Fragment(object):
 
         try:
             r1AlPairs = array(read1.get_aligned_pairs(with_seq=True))
-            r1RefSeq = dict((refPos, seq) for readPos, refPos, seq in r1AlPairs)
+            r1RefSeq = dict((int(refPos), seq) for readPos, refPos, seq in r1AlPairs)
             if None in r1RefSeq:
                 del r1RefSeq[None]
         except ValueError:
@@ -52,7 +52,9 @@ class Fragment(object):
 
             try:
                 r2AlPairs = array(read2.get_aligned_pairs(with_seq=True))
-                r2RefSeq = dict((refPos, seq) for readPos, refPos, seq in r2AlPairs)
+                r2RefSeq = dict(
+                    (int(refPos), seq) for readPos, refPos, seq in r2AlPairs
+                )
                 if None in r2RefSeq:
                     del r2RefSeq[None]
             except ValueError:
@@ -61,9 +63,7 @@ class Fragment(object):
 
             # now we try to combine the results of the two reads
             # we throw all ref positions into one pot to genrate one hybrid read
-            refPosJoined = sort(
-                union1d(array(list(r1IndDict.keys())), array(list(r2IndDict.keys())))
-            )
+            refPosJoined = sort(union1d(r1RefPos, r2RefPos))
             querySeqJoined = empty(len(refPosJoined), dtype=str)
             queryQualJoined = empty(len(refPosJoined), dtype=int32)
             refSeqJoined = empty(len(refPosJoined), dtype=str)
@@ -117,17 +117,7 @@ class Fragment(object):
                     r2IntPos = r2IndDict[refPos]
                     querySeqJoined[i] = r2QuerySeq[r2IntPos]
                     queryQualJoined[i] = r2QueryQual[r2IntPos]
-                    try:
-                        refSeqJoined[i] = r2RefSeq[refPos]
-                    except KeyError:
-                        print(read1)
-                        print(read2)
-                        print(r1RefSeq)
-                        print(r2RefSeq)
-                        print(refPos)
-                        print(r1IndDict)
-                        print(r2IndDict)
-                        exit()
+                    refSeqJoined[i] = r2RefSeq[refPos]
 
                 else:
                     # this shouldnt happen
