@@ -29,7 +29,7 @@ class Fragment(object):
             # i am not smart enough to do this in a one liner, so the more readable version it is
             r1RefSeq = {}
             for (readPos, refPos, seq) in r1AlPairs:
-                if not refPos is None:
+                if not refPos is None and not readPos is None:
                     r1RefSeq[int(refPos)] = seq
         except ValueError:
             r1AlPairs = array([])
@@ -56,7 +56,7 @@ class Fragment(object):
                 r2AlPairs = array(read2.get_aligned_pairs(with_seq=True))
                 r2RefSeq = {}
                 for (readPos, refPos, seq) in r2AlPairs:
-                    if not refPos is None:
+                    if not refPos is None and not readPos is None:
                         r2RefSeq[int(refPos)] = seq
             except ValueError:
                 r2AlPairs = array([])
