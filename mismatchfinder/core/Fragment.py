@@ -108,11 +108,16 @@ class Fragment(object):
                                 r2QueryQuals[r2IntPos] / 2
                             )
 
-                        elif read1Quals[r1IntPos] < read2Quals[r2IntPos]:
+                        elif r1QueryQuals[r1IntPos] < r2QueryQuals[r2IntPos]:
                             querySeqJoined[i] = r1QuerySeq[r2IntPos]
                             queryQualsJoined[i] = r2QueryQuals[r2IntPos] - int(
                                 r1QueryQuals[r1IntPos] / 2
                             )
+                        else:
+                            # in this case we just dont look at this site make it reference and
+                            # reduce the quality to 0
+                            querySeqJoined[i] = r1RefSeq[refPos]
+                            queryQualsJoined[i] = 0
 
                 elif refPos in r1IndDict:
                     # only read one has info, so we only take r1
