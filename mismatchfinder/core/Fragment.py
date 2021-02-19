@@ -97,7 +97,7 @@ class Fragment(object):
                     if r1QuerySeq[r1IntPos] == r2QuerySeq[r2IntPos]:
                         querySeqJoined[i] = r1QuerySeq[r1IntPos]
                         queryQualsJoined[i] = (
-                            r1QueryQuals[r1IntPos] + r2QueryQual[r2IntPos]
+                            r1QueryQuals[r1IntPos] + r2QueryQuals[r2IntPos]
                         )
                     else:
                         # however, if they arent the same, we take the base from the higher qual
