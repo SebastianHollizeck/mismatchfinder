@@ -15,7 +15,8 @@ class Fragment(object):
         # build a dictionary mapping the refPos to the readPos
         r1IndDict = dict((k, i) for i, k in enumerate(r1RefPos))
         # remove the None entry
-        del r1IndDict[None]
+        if None in r1IndDict:
+            del r1IndDict[None]
 
         r1AlStart = read1.query_alignment_start
         r1AlEnd = read1.query_alignment_end
@@ -39,7 +40,8 @@ class Fragment(object):
             # build a dictionary mapping the refPos to the readPos
             r2IndDict = dict((k, i) for i, k in enumerate(r2RefPos))
             # remove the None entry
-            del r2IndDict[None]
+            if None in r2IndDict:
+                del r2IndDict[None]
 
             r2AlStart = read2.query_alignment_start
             r2AlEnd = read2.query_alignment_end
