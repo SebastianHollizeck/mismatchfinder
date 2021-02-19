@@ -111,7 +111,7 @@ class Fragment(object):
                         elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
                             querySeqJoined[i] = r1QuerySeq[read2IntPos]
                             queryQualsJoined[i] = r2QueryQuals[read2IntPos] - int(
-                                r1QueryQuals[read1IntPos] / 2
+                                r1QueryQuals[r1IntPos] / 2
                             )
 
                 elif refPos in r1IndDict:
