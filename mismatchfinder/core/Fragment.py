@@ -1,5 +1,7 @@
 from numpy import array, union1d, sort, empty, fromiter, fromstring, int32
 
+from logging import debug
+
 
 class Fragment(object):
     """Contains all info available for a dna fragment"""
@@ -8,6 +10,7 @@ class Fragment(object):
 
         super(Fragment, self).__init__()
 
+        debug(f"Building fragment with read {read1.query_name}")
         # get all the relevant info from read1 we would ever want
         r1QuerySeq = array(list(read1.query_sequence))
         r1QueryQual = array(read1.query_qualities, dtype=int32)
