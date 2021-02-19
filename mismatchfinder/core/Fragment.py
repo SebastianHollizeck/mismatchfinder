@@ -127,7 +127,11 @@ class Fragment(object):
 
                 else:
                     # this shouldnt happen
-                    error("Found overlapping readpos with no read attached")
+                    print(read1)
+                    print(read2)
+                    print(i)
+                    print(refPos)
+                    raise Exception("Found overlapping readpos with no read attached")
 
             # Now we just have to assign all fields for later usage
             self.refSeq = refSeqJoined
