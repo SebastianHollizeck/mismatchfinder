@@ -117,7 +117,18 @@ class Fragment(object):
                     r2IntPos = r2IndDict[refPos]
                     querySeqJoined[i] = r2QuerySeq[r2IntPos]
                     queryQualJoined[i] = r2QueryQual[r2IntPos]
-                    refSeqJoined[i] = r2RefSeq[refPos]
+                    try:
+                        refSeqJoined[i] = r2RefSeq[refPos]
+                    except KeyError:
+                        print(read1)
+                        print(read2)
+                        print(r1RefSeq)
+                        print(r2RefSeq)
+                        print(refPos)
+                        print(r1IndDict)
+                        print(r2IndDict)
+                        exit()
+
                 else:
                     # this shouldnt happen
                     error("Found overlapping readpos with no read attached")
