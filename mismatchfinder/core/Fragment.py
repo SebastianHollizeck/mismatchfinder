@@ -174,13 +174,13 @@ class Fragment(object):
 
     def getMismatches(self, minBQ):
         """get the mismatches contained in this fragment"""
-
+        print("finding mutations")
         mutations = []
         # we only go from 1 to n-1 because we cannot build trinucleotides otherwise
         # because python doesnt have the normal from i =0, we need a while
         i = 1
         while i < len(self.refSeq) - 1:
-
+            print(i)
             if self.refSeq[i] == self.querySeq[i]:
                 i = i + 1
                 continue
