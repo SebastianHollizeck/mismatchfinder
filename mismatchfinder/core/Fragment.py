@@ -26,9 +26,11 @@ class Fragment(object):
 
         try:
             r1AlPairs = array(read1.get_aligned_pairs(with_seq=True))
-            r1RefSeq = dict((int(refPos), seq) for readPos, refPos, seq in r1AlPairs)
-            if None in r1RefSeq:
-                del r1RefSeq[None]
+            # i am not smart enough to do this in a one liner, so the more readable version it is
+            r1RefSeq = {}
+            for (readPos, refPos, seq) in r1AlPairs:
+                if not refPos is None:
+                    r1RefSeq[int(refPos)] = seq
         except ValueError:
             r1AlPairs = array([])
             r1RefSeq = array([])
@@ -52,11 +54,10 @@ class Fragment(object):
 
             try:
                 r2AlPairs = array(read2.get_aligned_pairs(with_seq=True))
-                r2RefSeq = dict(
-                    (int(refPos), seq) for readPos, refPos, seq in r2AlPairs
-                )
-                if None in r2RefSeq:
-                    del r2RefSeq[None]
+                r2RefSeq = {}
+                for (readPos, refPos, seq) in r2AlPairs:
+                    if not refPos is None:
+                        r2RefSeq[int(refPos)] = seq
             except ValueError:
                 r2AlPairs = array([])
                 r2RefSeq = array([])
