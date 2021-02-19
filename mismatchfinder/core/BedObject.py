@@ -114,3 +114,19 @@ class BedObject(object):
             return True
         else:
             return False
+
+    def isFragmentInRegion(self, fragment):
+        try:
+            bedIt = list(
+                self.__ncls[chr].find_overlap(
+                    fragment.fragment_start, fragment.fragment_end
+                )
+            )
+        except KeyError:
+            return False
+
+        # and now we decide if there was an overlap
+        if len(bedIt) > 0:
+            return True
+        else:
+            return False

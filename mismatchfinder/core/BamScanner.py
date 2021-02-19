@@ -10,6 +10,7 @@ from numpy import array, quantile, sort
 from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.core.EndMotives import EndMotives
 from mismatchfinder.utils.Misc import countLowerCase
+from mismatchfinder.core.Fragment import Fragment
 
 
 class BamScanner(Process):
@@ -74,6 +75,7 @@ class BamScanner(Process):
         nMisMatches = 0
         nAlignedBases = 0
         nAlignedReads = 0
+        nDiscordantReads = 0
 
         # store the fragment lengths for later
         fragLengths = []
@@ -117,89 +119,90 @@ class BamScanner(Process):
                     )
                     currTime = now
 
-            # we only want proper reads and no secondaries. We can be pretty lenient here, because we
-            # check for the mismatch itself if the sequencing quality is high enough later.
-            if (
-                read.is_duplicate
-                or read.is_qcfail
-                or read.is_secondary
-                or read.is_supplementary
-                or read.is_unmapped
-                or read.mapping_quality < self.minMQ
-            ):
+            # we build proper fragments of DNA from the reads, if they are paired in sequencing
+            # or we discard them due to quality issues, but we still discard any supplemenary or
+            # secondary reads
+            if read.is_duplicate or read.is_secondary or read.is_supplementary:
                 nLowQualReads += 1
                 continue
-            else:
 
-                # if the read is properly paired, there is the chance of a
-                # overlap, so we instead store the read until we find the mate
-                # so that we can build a consensus
-                qname = read.query_name
-                if read.is_proper_pair:
-                    if qname not in read_dict:
-                        read_dict[qname] = read
-                        continue
-                    else:
-                        read1, read2 = makeConsensusRead(read, read_dict[qname])
-
-                        del read_dict[qname]
-                        reads = [read1, read2]
+            # store the read until we find the second one, but only if they are aligned to the
+            # chromosome, otherwise we just continue
+            qname = read.query_name
+            if read.next_reference_id == read.reference_id:
+                if qname not in read_dict:
+                    read_dict[qname] = read
+                    continue
                 else:
-                    # if its not a proper pair, we just use it as is
-                    reads = [read]
-
-                # now we execute this for the list of reads we created
-                for r in reads:
-                    # if we did get a blacklist and the read actually is within that region, we
-                    # discard it and keep a count on how many we discarded
-                    if (
-                        not self.blackList is None
-                        and self.blackList.isReadWithinRegion(r)
-                    ):
-                        nBlackListedReads += 1
-
+                    # now that we have access to both reads, we can decide, how we build this
+                    # fragment
+                    mate = read_dict[qname]
+                    del read_dict[qname]
+                    r1U = isReadUsable(read, minMQ=self.minMQ)
+                    r2U = isReadUsable(mate, minMQ=self.minMQ)
+                    if r1U and r2U:
+                        frag = Fragment(read, mate)
+                    elif r1U:
+                        frag = Fragment(read)
+                        nLowQualReads += 1
+                    elif r2U:
+                        frag = Fragment(mate)
+                        nLowQualReads += 1
                     else:
-                        # only analyse read in the whitelist region if there is one
-                        if self.whiteList is None or self.whiteList.isReadWithinRegion(
-                            r
+                        # both of the reads are bad, so we just continue
+                        nLowQualReads += 2
+                        continue
+
+            else:
+                # if this is single end sequencing, we just build the fragment right away
+                frag = Fragment(read)
+                # but if it is paired, then this is a discordant read
+                if read.is_paired:
+                    nDiscordantReads += 1
+
+            # now we only need to check if there is a blacklist or whitelist, which restricts us further
+            if not self.blackList is None and self.blackList.isFragmentInRegion(frag):
+                if fragment.is_paired:
+                    nBlackListedReads += 2
+                else:
+                    nBlackListedReads += 1
+
+            else:
+                # analyse if the fragment overlaps with the whitelist
+                if self.whiteList is None or self.whiteList.isFragmentInRegion(frag):
+                    # get the mutations the fragment contains
+                    tmpMM = frag.getMismatches(self.minBQ)
+
+                    # check if the actual mismatch is in the white/blacklist
+                    for mm in tmpMM:
+                        if (
+                            not self.blackList is None
+                            and self.blackList.isMisMatchWithinRegion(mm)
                         ):
-                            # we only do our mismacth analysis if the read actually does have mismatches
-                            if not hasMisMatches(r):
-                                nNoMisMatchReads += 1
+                            continue
+                        if (
+                            self.whiteList is None
+                            or self.whiteList.isMisMatchWithinRegion(mm)
+                        ):
+                            # increase the count for this mismatch if we found it already
+                            if mm in mutSites:
+                                mutSites[mm] += 1
                             else:
-                                # get all mismatches in this read
-                                tmpMisMatches = self.scanAlignedSegment(r)
-                                # store the mismatches and keep a record how often each was found
-                                for mm in tmpMisMatches:
-                                    if mm in mutSites:
-                                        mutSites[mm] += 1
-                                    else:
-                                        mutSites[mm] = 1
-                                # we also store the amount of mismatches found, so we can calculate
-                                # the mismatches per read which should be stable between samples
-                                nMisMatches += len(tmpMisMatches)
+                                mutSites[mm] = 1
+                            nMisMatches += 1
 
-                            # even if the fragment doesnt have any mismatches it is important to
-                            # store the fragment length of this read for fragment size statistics, but
-                            # only for the first read, because otherwise we just have everything twice
-                            if not r.is_paired or r.is_read1:
-                                fragLengths.append(abs(r.template_length))
-                            # single end reads will not have a template length
-                            # that is meaningfull for us, but its good to have
-                            # the info that it was single end in the final
-                            # result as
-                            # (number discordant reads == number of reads)
+                    nAlignedBases += len(frag.querySeq)
+                    if frag.is_paired:
+                        nAlignedReads += 2
+                    else:
+                        nAlignedReads += 1
 
-                            # add the amount of bases of this read that were aligned
-                            nAlignedBases += r.query_alignment_length
-                            nAlignedReads += 1
+                    # TODO: add endmotif analysis to the fragments
 
-                            # we also care about the endmotives of the reads, so we store those
-                            self.endMotives.count(r)
-                        else:
-                            nBlackListedReads += 1
+                    fragLengths.append(frag.fragment_end - frag.fragment_start)
 
-        # we are done so we update the status as well
+                else:
+                    nBlackListedReads += 1
 
         self.logger.info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
@@ -208,7 +211,7 @@ class BamScanner(Process):
         # did we have an issue with reads?
         if nAlignedBases == 0:
             self.logger.error(
-                f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlacklistedReads: {nBlackListedReads}"
+                f"Could not detect any reads from Bam ({self.bamFilePath}). Further analysis is not possible\nLowQualReads: {nLowQualReads}\nNoMisMatchReads: {nNoMisMatchReads}\nBlackListedReads: {nBlackListedReads}"
             )
             raise Exception(f"No reads left for {self.bamFilePath}")
 
@@ -314,167 +317,6 @@ class BamScanner(Process):
         del self.semaphore
         del self.lock
 
-    # read through one read and find all mismatches and their contexts
-    # can visualize the contexts on the reads
-    def scanAlignedSegment(self, AlignedSegment, vis=False):
-
-        # this is where we will store the sites we find in this read
-        mutations = []
-
-        # we do this here, so we only do it once instead of in the loop
-        alignedRefSequence = AlignedSegment.get_reference_sequence()
-        referencePositions = AlignedSegment.get_reference_positions(full_length=True)
-        refIndDict = dict(
-            (k, i) for i, k in enumerate(AlignedSegment.get_reference_positions())
-        )
-
-        # loop through the read
-        for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
-            with_seq=True, matches_only=True
-        ):
-
-            # if it is lower case it symbolises a mismatch
-            if seq.islower():
-
-                # because we might have deleted this by creating a consensus, we check if the query_sequence is equal to what we actually have
-                # @TODO: proper fix for MD tag when building consensus, because
-                # that would remove the need of this tag alternatively, build
-                # our own class, which holds all the info we need and we can
-                # manipulate
-                if seq.upper() == AlignedSegment.query_sequence[readPos]:
-                    # # need to fix this, because the ref is calculated from
-                    # the MD string which we kinda fucked up by changing
-                    # the sequence
-                    tmpRef = list(alignedRefSequence)
-                    mappedPos = readPos - AlignedSegment.query_alignment_start
-                    mdStr = AlignedSegment.get_tag("MD")
-                    debug(
-                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
-                    )
-                    tmpRef[refIndDict[contigPos]] = tmpRef[
-                        refIndDict[contigPos]
-                    ].upper()
-
-                    alignedRefSequence = "".join(tmpRef)
-                    # but then we just skipr this corrected snp
-                    continue
-
-                # we really only want high quality mismatches
-                # we need to do this before we do the softclip adjustment
-                # because the base qualities are not soft clipped
-                qual = AlignedSegment.query_qualities[readPos]
-
-                # if the quality of the base is too low, we drop this
-                if qual < self.minBQ:
-                    continue
-
-                # offset the soft cliping at the beginning
-                readPos = readPos - AlignedSegment.query_alignment_start
-                # offset the reference location
-                templatePos = contigPos - AlignedSegment.reference_start
-
-                # if everything is right, we get the trinucl context of the mismatch in the reference
-                # and the query
-                altContext = AlignedSegment.query_alignment_sequence[
-                    readPos - 1 : readPos + 2
-                ]
-                refContext = alignedRefSequence[templatePos - 1 : templatePos + 2]
-
-                # if either of those contexts is not the full 3 nucleotides, we will skip to the next
-                if len(altContext) != 3 or len(refContext) != 3:
-                    continue
-
-                # now we check if what we have is actually from a continous stretch, or if there is an
-                # indel hidden within the snp
-                # as we use the full length refpositions list we need to add the softclip positions back
-                refIndex = readPos + AlignedSegment.query_alignment_start
-                # we want an increment of 1 from the position left to middle and one more again for
-                # the position to the right
-                if (
-                    referencePositions[refIndex - 1] != referencePositions[refIndex] - 1
-                    or referencePositions[refIndex + 1]
-                    != referencePositions[refIndex] + 1
-                ):
-                    continue
-
-                # now that we have a proper context defined we can go about and check what type of variant this
-
-                # if we have more than 1 lower case char in our context, that means we ae at the
-                # beginning of a multi mismatch region and we should combine the two into a multi
-                # variant thing
-                # so here we just move on to the next position if we find there is a mismatch in the
-                # next position
-                # this will also take care of trinucleotide variants
-                if refContext[2].islower():
-                    continue
-                elif refContext[0].islower():
-                    # this means its a DBS
-                    misMatchClass = 2
-                else:
-                    # and this is a SBS
-                    misMatchClass = 1
-
-                # however we would get the last position of a 3bp mismatch as a dinucleotide change,
-                # which we do not want so we also check if there are more than 2 variants within 4
-                # positions
-                if (
-                    countLowerCase(
-                        alignedRefSequence[templatePos - 2 : templatePos + 2]
-                    )
-                    > 2
-                ):
-                    continue
-
-                # that would leave us with only single or dinucleotide variants which are shifted to
-                # the left e.g.
-                # alt: TTG     alt: CTG
-                # ref: ccG     ref: CcG
-                # which we can easily convert to the classes that we want which are the C>T changes in
-                # the dinucleotide context CC,CT,TC because those are specific for melanoma
-                mut = (
-                    AlignedSegment.reference_name,
-                    contigPos,
-                    refContext,
-                    altContext,
-                    misMatchClass,
-                )
-
-                # just so we can check what kind of variants we actually put into this we can print
-                # the contexts for easy readability (this does not put the context at the same
-                # position if there are indels in the read but at the position it is taken from)
-                if vis:
-                    # print the query (the actual read) on top
-                    self.logger.debug(AlignedSegment.query_alignment_sequence)
-                    line = ""
-                    for i in range(0, readPos - 1):
-                        line += " "
-                    line += altContext
-                    self.logger.debug(line)
-                    # print the template (the reference below)
-                    self.logger.debug(alignedRefSequence, addTime=False)
-                    line = ""
-                    for i in range(0, readPos - 1):
-                        line += " "
-                    line += refContext
-                    self.logger.debug(line)
-
-                # we do one last check if the actual mismatch is in the region
-                if (
-                    not self.blackList is None
-                    and self.blackList.isMisMatchWithinRegion(mut)
-                ):
-                    # we do nothing here, because the mismatch is outside the region of interest
-                    append = False
-                    debug(f"read: {read} is not blacklisted, but mut {mut} is")
-
-                elif self.whiteList is None or self.whiteList.isMisMatchWithinRegion(
-                    mut
-                ):
-                    # add to the found mutations now that everything is sorted out
-                    mutations.append(mut)
-
-        return mutations
-
 
 # this is a simple check if a MDstring contains any mismatches
 def hasMisMatches(read):
@@ -496,102 +338,11 @@ def hasMisMatches(read):
         return True
 
 
-def makeConsensusRead(read1, read2):
-    # debug("Found proper pair, attemping to build consensus")
-    # we get the overlapping parts of the reads
-    # get all the info we need from read1
-    read1RefPos = read1.get_reference_positions(full_length=True)
-    read1Seq = list(read1.query_sequence)
-    read1Quals = read1.query_qualities
-    read1IndDict = dict((k, i) for i, k in enumerate(read1RefPos))
-    # do the same with read 1
-    read2RefPos = read2.get_reference_positions(full_length=True)
-    read2Seq = list(read2.query_sequence)
-    read2Quals = read2.query_qualities
-    read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
-    # get the intersection of the reference positions of the two reads
-    inter = set(read1RefPos).intersection(read2RefPos)
+def isReadUsable(read, minMQ):
 
-    # go through all of the overlaps and decide which of the reads is better
-    for pos in inter:
-        # we might get a None, if there was softclipping, so we discard those
-        if pos == None:
-            continue
-        read1IntPos = read1IndDict[pos]
-        read2IntPos = read2IndDict[pos]
-        # we only really care if there is a difference in the sequence
-        if read1Seq[read1IntPos] != read2Seq[read2IntPos]:
-
-            # we see which has the higher quality and then take that as the ground truth, but also
-            # we try to avoid counting the overlap twice by reducing the quality of the other to 0
-            # but also, because they did not agree, we slightly reduce the quality of the kept read
-            if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
-                read2Seq[read2IntPos] = read1Seq[read1IntPos]
-                read1Quals[read1IntPos] = read1Quals[read1IntPos] - (
-                    read2Quals[read2IntPos] / 2
-                )
-                read2Quals[read2IntPos] = 0
-            elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
-                read1Seq[read1IntPos] = read2Seq[read2IntPos]
-                read2Quals[read2IntPos] = read2Quals[read2IntPos] - (
-                    read1Quals[read1IntPos] / 2
-                )
-                read1Quals[read1IntPos] = 0
-            else:
-                # this is the case where both are likely, in this case we just
-                # use the reference that one of them hopefully has?
-
-                # this is the ref base of read1, we can use either, because we
-                # know they overlap here, but we need to make it upper, because
-                # if read1 is the one with the mismatch we get a lowercase
-
-                # we kinda use this to check if an md string is present
-                readForBase = None
-                try:
-                    read1.get_tag("MD")
-                    readForBase = read1
-                except KeyError:
-                    # now we try the seond read
-                    try:
-                        read2.get_tag("MD")
-                        readForBase = read2
-                    except KeyError:
-                        # well, we tried without an md str we cant build a consensus
-                        return (read1, read2)
-
-                for (readPos, contigPos, refBase) in readForBase.get_aligned_pairs(
-                    with_seq=True, matches_only=True
-                ):
-                    if contigPos == pos:
-                        refBase = refBase.upper()
-                        break
-
-                if read1Seq[read1IntPos] == refBase:
-                    read2Seq[read2IntPos] = refBase
-                    read2Quals[read2IntPos] = read1Quals[read1IntPos]
-                elif read2Seq[read2IntPos] == refBase:
-                    read1Seq[read1IntPos] = refBase
-                    read1Quals[read1IntPos] = read2Quals[read2IntPos]
-                else:
-                    # at this point we just take whatever they say
-                    pass
-        else:
-            # this is a quick and ugly fix to not count mismatches from the two reads corresponding
-            # to one dna fragment twice. If both reads are reference, we dont care anyways, but if
-            # both show a mismatch, we only want to count one
-            if read1Quals[read1IntPos] >= read2Quals[read2IntPos]:
-                read2Quals[read2IntPos] = 0
-            elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
-                read1Seq[read1IntPos] = read2Seq[read2IntPos]
-                read1Quals[read1IntPos] = 0
-
-    # finally we have to create new reads
-    read1New = read1
-    read1New.query_sequence = "".join(read1Seq)
-    read1New.query_qualities = read1Quals
-    # same for read2
-    read2New = read2
-    read2New.query_sequence = "".join(read2Seq)
-    read2New.query_qualities = read2Quals
-
-    return (read1New, read2New)
+    return (
+        read.mapping_quality >= self.minMQ
+        and not read.is_qcfail
+        and not read.is_unmapped
+        and not read.is_duplicate
+    )
