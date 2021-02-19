@@ -176,13 +176,10 @@ class Fragment(object):
             else:
                 # now that we have the standards out of the way, we can continue
 
-                # if there is an indel hidden, the refPosition will not be consecutive or even the
-                # chr names might not be the same, which we discard
+                # if there is an indel hidden, the refPosition will not be consecutive
                 if (
                     self.refPos[i - 1] != self.refPos[i] - 1
                     or self.refPos[i] != self.refPos[i + 1] - 1
-                    or self.refNameArray[i] != self.refNameArray[i - 1]
-                    or self.refNameArray[i] != self.refNameArray[i + 1]
                 ):
                     continue
 
@@ -213,7 +210,7 @@ class Fragment(object):
                 # which we can easily convert to the classes that we want which are the C>T changes in
                 # the dinucleotide context CC,CT,TC because those are specific for melanoma
                 mut = (
-                    self.refNameArray[i],
+                    self.refName,
                     self.refPos[i],
                     "".join(queryContext),
                     "".join(refContext),
