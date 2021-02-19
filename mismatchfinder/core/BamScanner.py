@@ -341,7 +341,7 @@ def hasMisMatches(read):
 def isReadUsable(read, minMQ):
 
     return (
-        read.mapping_quality >= self.minMQ
+        read.mapping_quality >= minMQ
         and not read.is_qcfail
         and not read.is_unmapped
         and not read.is_duplicate
