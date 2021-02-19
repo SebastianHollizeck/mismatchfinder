@@ -12,7 +12,7 @@ class Fragment(object):
 
         # get all the relevant info from read1 we would ever want
         r1QuerySeq = array(list(read1.query_sequence))
-        r1QueryQual = array(read1.query_qualities, dtype=int32)
+        r1QueryQuals = array(read1.query_qualities, dtype=int32)
         r1RefPos = array(read1.get_reference_positions(full_length=True))
         # build a dictionary mapping the refPos to the readPos
         r1IndDict = dict((k, i) for i, k in enumerate(r1RefPos))
@@ -40,7 +40,7 @@ class Fragment(object):
         if read2 is not None:
             # get all the info from read2 as well
             r2QuerySeq = array(list(read2.query_sequence))
-            r2QueryQual = array(read2.query_qualities, dtype=int32)
+            r2QueryQuals = array(read2.query_qualities, dtype=int32)
             r2RefPos = array(read2.get_reference_positions(full_length=True))
             # build a dictionary mapping the refPos to the readPos
             r2IndDict = dict((k, i) for i, k in enumerate(r2RefPos))
@@ -73,7 +73,7 @@ class Fragment(object):
                 )
             )
             querySeqJoined = empty(len(refPosJoined), dtype=str)
-            queryQualJoined = empty(len(refPosJoined), dtype=int32)
+            queryQualsJoined = empty(len(refPosJoined), dtype=int32)
             refSeqJoined = empty(len(refPosJoined), dtype=str)
 
             # go through all of the overlaps and decide which of the reads is better
@@ -96,21 +96,21 @@ class Fragment(object):
                     # and are done with it
                     if r1QuerySeq[r1IntPos] == r2QuerySeq[r2IntPos]:
                         querySeqJoined[i] = r1QuerySeq[r1IntPos]
-                        queryQualJoined[i] = (
-                            r1QueryQual[r1IntPos] + r2QueryQual[r2IntPos]
+                        queryQualsJoined[i] = (
+                            r1QueryQuals[r1IntPos] + r2QueryQual[r2IntPos]
                         )
                     else:
                         # however, if they arent the same, we take the base from the higher qual
                         # read but also reduce the base quality at that point
                         if r1QueryQuals[r1IntPos] > r2QueryQuals[r2IntPos]:
                             querySeqJoined[i] = r1QuerySeq[r1IntPos]
-                            queryQualJoined[i] = r1QueryQuals[r1IntPos] - int(
+                            queryQualsJoined[i] = r1QueryQuals[r1IntPos] - int(
                                 read2Quals[read2IntPos] / 2
                             )
 
                         elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
-                            querySeqJoined[i] = read2Seq[read2IntPos]
-                            queryQualJoined[i] = read2Quals[read2IntPos] - int(
+                            querySeqJoined[i] = r1QuerySeq[read2IntPos]
+                            queryQualsJoined[i] = r2QueryQuals[read2IntPos] - int(
                                 read1Quals[read1IntPos] / 2
                             )
 
@@ -118,13 +118,13 @@ class Fragment(object):
                     # only read one has info, so we only take r1
                     r1IntPos = r1IndDict[refPos]
                     querySeqJoined[i] = r1QuerySeq[r1IntPos]
-                    queryQualJoined[i] = r1QueryQual[r1IntPos]
+                    queryQualsJoined[i] = r1QueryQuals[r1IntPos]
                     refSeqJoined[i] = r1RefSeq[refPos]
                 elif refPos in r2IndDict:
                     # only read two has info, so we only take r2
                     r2IntPos = r2IndDict[refPos]
                     querySeqJoined[i] = r2QuerySeq[r2IntPos]
-                    queryQualJoined[i] = r2QueryQual[r2IntPos]
+                    queryQualsJoined[i] = r2QueryQuals[r2IntPos]
                     refSeqJoined[i] = r2RefSeq[refPos]
 
                 else:
@@ -138,7 +138,7 @@ class Fragment(object):
             # Now we just have to assign all fields for later usage
             self.refSeq = refSeqJoined
             self.querySeq = querySeqJoined
-            self.queryQual = queryQualJoined
+            self.queryQuals = queryQualsJoined
             self.refPos = refPosJoined
 
             self.mapping_quality = (r1MapQual + r2MapQual) / 2
@@ -158,11 +158,11 @@ class Fragment(object):
 
             # query sequence of this fragment (aligned part)
             self.querySeq = empty(len(r1RefSeq), dtype=str)
-            self.queryQual = empty(len(r1RefSeq), dtype=int32)
+            self.queryQuals = empty(len(r1RefSeq), dtype=int32)
             for i, key in enumerate(sorted(r1IndDict.keys())):
                 ind = r1IndDict[key]
                 self.querySeq[i] = r1QuerySeq[ind]
-                self.queryQual[i] = r1QueryQual[ind]
+                self.queryQuals[i] = r1QueryQuals[ind]
 
             self.mapping_quality = r1MapQual
 
@@ -182,7 +182,7 @@ class Fragment(object):
             if self.refSeq[i] == self.querySeq[i]:
                 i = i + 1
                 continue
-            elif self.queryQual[i] < minBQ:
+            elif self.queryQuals[i] < minBQ:
                 i = i + 1
                 continue
             else:
