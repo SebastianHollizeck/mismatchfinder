@@ -528,13 +528,13 @@ def makeConsensusRead(read1, read2):
             if read1Quals[read1IntPos] > read2Quals[read2IntPos]:
                 read2Seq[read2IntPos] = read1Seq[read1IntPos]
                 read1Quals[read1IntPos] = read1Quals[read1IntPos] - (
-                    read2Quals[read2IntPos] / 2
+                    int(read2Quals[read2IntPos] / 2)
                 )
                 read2Quals[read2IntPos] = 0
             elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
                 read1Seq[read1IntPos] = read2Seq[read2IntPos]
                 read2Quals[read2IntPos] = read2Quals[read2IntPos] - (
-                    read1Quals[read1IntPos] / 2
+                    int(read1Quals[read1IntPos] / 2)
                 )
                 read1Quals[read1IntPos] = 0
             else:
