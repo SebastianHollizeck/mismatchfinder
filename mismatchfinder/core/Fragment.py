@@ -1,7 +1,5 @@
 from numpy import array, union1d, sort, empty, fromiter, fromstring, int32
 
-from logging import debug
-
 
 class Fragment(object):
     """Contains all info available for a dna fragment"""
@@ -11,58 +9,35 @@ class Fragment(object):
         super(Fragment, self).__init__()
 
         # get all the relevant info from read1 we would ever want
-        r1QuerySeq = array(list(read1.query_sequence))
-        r1QueryQuals = array(read1.query_qualities, dtype=int32)
-        r1RefPos = array(read1.get_reference_positions(full_length=True))
-        # build a dictionary mapping the refPos to the readPos
-        r1IndDict = dict((k, i) for i, k in enumerate(r1RefPos))
-        # remove the None entry
-        if None in r1IndDict:
-            del r1IndDict[None]
+        r1QuerySeq = array(list(read1.query_sequence), dtype=str)
 
-        r1AlStart = read1.query_alignment_start
-        r1AlEnd = read1.query_alignment_end
-
-        r1MapQual = read1.mapping_quality
-        r1RefName = read1.reference_name
-
+        present = True
         try:
-            r1AlPairs = array(read1.get_aligned_pairs(with_seq=True))
-            # i am not smart enough to do this in a one liner, so the more readable version it is
-            r1RefSeq = {}
-            for (readPos, refPos, seq) in r1AlPairs:
-                if not refPos is None and not readPos is None:
-                    r1RefSeq[int(refPos)] = seq
+            read1.get_tag("MD")
         except ValueError:
-            r1AlPairs = array([])
-            r1RefSeq = array([])
+            present = False
+
+        r1RefSeq = {}
+        if present:
+            r1AlPairs = read1.get_aligned_pairs(with_seq=True, matches_only=True)
+            for (readPos, refPos, seq) in r1AlPairs:
+                r1RefSeq[int(refPos)] = (seq, readPos)
 
         if read2 is not None:
             # get all the info from read2 as well
-            r2QuerySeq = array(list(read2.query_sequence))
-            r2QueryQuals = array(read2.query_qualities, dtype=int32)
-            r2RefPos = array(read2.get_reference_positions(full_length=True))
-            # build a dictionary mapping the refPos to the readPos
-            r2IndDict = dict((k, i) for i, k in enumerate(r2RefPos))
-            # remove the None entry
-            if None in r2IndDict:
-                del r2IndDict[None]
+            r2QuerySeq = array(list(read2.query_sequence), dtype=str)
 
-            r2AlStart = read2.query_alignment_start
-            r2AlEnd = read2.query_alignment_end
-
-            r2MapQual = read2.mapping_quality
-            r2RefName = read2.reference_name
-
+            present = True
             try:
-                r2AlPairs = array(read2.get_aligned_pairs(with_seq=True))
-                r2RefSeq = {}
-                for (readPos, refPos, seq) in r2AlPairs:
-                    if not refPos is None and not readPos is None:
-                        r2RefSeq[int(refPos)] = seq
+                read2.get_tag("MD")
             except ValueError:
-                r2AlPairs = array([])
-                r2RefSeq = array([])
+                present = False
+
+            r2RefSeq = {}
+            if present:
+                r2AlPairs = read2.get_aligned_pairs(with_seq=True, matches_only=True)
+                for (readPos, refPos, seq) in r2AlPairs:
+                    r2RefSeq[int(refPos)] = (seq, readPos)
 
             # now we try to combine the results of the two reads
             # we throw all ref positions into one pot to genrate one hybrid read
@@ -81,37 +56,44 @@ class Fragment(object):
                 refPos = refPosJoined[i]
 
                 if (
-                    r1RefName == r2RefName
-                    and refPos in r1IndDict
-                    and refPos in r2IndDict
+                    read1.reference_name == read2.reference_name
+                    and refPos in r1RefSeq
+                    and refPos in r2RefSeq
                 ):
                     # both reads have this position, so we can build a consensus
-                    r1IntPos = r1IndDict[refPos]
-                    r2IntPos = r2IndDict[refPos]
+                    refBase, r1IntPos = r1RefSeq[refPos]
+                    refBase, r2IntPos = r2RefSeq[refPos]
 
                     # first we set the things that are equal for the reads
-                    refSeqJoined[i] = r1RefSeq[refPos]
+                    refSeqJoined[i] = refBase
 
                     # if there is a concordance between the two reads, we just adjust the base qual
                     # and are done with it
                     if r1QuerySeq[r1IntPos] == r2QuerySeq[r2IntPos]:
                         querySeqJoined[i] = r1QuerySeq[r1IntPos]
                         queryQualsJoined[i] = (
-                            r1QueryQuals[r1IntPos] + r2QueryQuals[r2IntPos]
+                            read1.query_qualities[r1IntPos]
+                            + read2.query_qualities[r2IntPos]
                         )
                     else:
                         # however, if they arent the same, we take the base from the higher qual
                         # read but also reduce the base quality at that point
-                        if r1QueryQuals[r1IntPos] > r2QueryQuals[r2IntPos]:
+                        if (
+                            read1.query_qualities[r1IntPos]
+                            > read2.query_qualities[r2IntPos]
+                        ):
                             querySeqJoined[i] = r1QuerySeq[r1IntPos]
-                            queryQualsJoined[i] = r1QueryQuals[r1IntPos] - int(
-                                r2QueryQuals[r2IntPos] / 2
+                            queryQualsJoined[i] = read1.query_qualities[r1IntPos] - int(
+                                read2.query_qualities[r2IntPos] / 2
                             )
 
-                        elif r1QueryQuals[r1IntPos] < r2QueryQuals[r2IntPos]:
+                        elif (
+                            read1.query_qualities[r1IntPos]
+                            < read2.query_qualities[r2IntPos]
+                        ):
                             querySeqJoined[i] = r1QuerySeq[r2IntPos]
-                            queryQualsJoined[i] = r2QueryQuals[r2IntPos] - int(
-                                r1QueryQuals[r1IntPos] / 2
+                            queryQualsJoined[i] = read2.query_qualities[r2IntPos] - int(
+                                read1.query_qualities[r1IntPos] / 2
                             )
                         else:
                             # in this case we just dont look at this site make it reference and
@@ -119,18 +101,18 @@ class Fragment(object):
                             querySeqJoined[i] = r1RefSeq[refPos]
                             queryQualsJoined[i] = 0
 
-                elif refPos in r1IndDict:
+                elif refPos in r1RefSeq:
                     # only read one has info, so we only take r1
-                    r1IntPos = r1IndDict[refPos]
+                    refBase, r1IntPos = r1RefSeq[refPos]
                     querySeqJoined[i] = r1QuerySeq[r1IntPos]
-                    queryQualsJoined[i] = r1QueryQuals[r1IntPos]
-                    refSeqJoined[i] = r1RefSeq[refPos]
-                elif refPos in r2IndDict:
+                    queryQualsJoined[i] = read1.query_qualities[r1IntPos]
+                    refSeqJoined[i] = refBase
+                elif refPos in r2RefSeq:
                     # only read two has info, so we only take r2
-                    r2IntPos = r2IndDict[refPos]
+                    refBase, r2IntPos = r2RefSeq[refPos]
                     querySeqJoined[i] = r2QuerySeq[r2IntPos]
-                    queryQualsJoined[i] = r2QueryQuals[r2IntPos]
-                    refSeqJoined[i] = r2RefSeq[refPos]
+                    queryQualsJoined[i] = read2.query_qualities[r2IntPos]
+                    refSeqJoined[i] = refBase
 
                 else:
                     # this shouldnt happen
@@ -146,7 +128,7 @@ class Fragment(object):
             self.queryQuals = queryQualsJoined
             self.refPos = refPosJoined
 
-            self.mapping_quality = (r1MapQual + r2MapQual) / 2
+            self.mapping_quality = (read1.mapping_quality + read2.mapping_quality) / 2
 
             self.is_paired = True
         else:
@@ -164,17 +146,17 @@ class Fragment(object):
             # query sequence of this fragment (aligned part)
             self.querySeq = empty(len(r1RefSeq), dtype=str)
             self.queryQuals = empty(len(r1RefSeq), dtype=int32)
-            for i, key in enumerate(sorted(r1IndDict.keys())):
-                ind = r1IndDict[key]
+            for i, key in enumerate(sorted(r1RefSeq.keys())):
+                refBase, ind = r1IndDict[key]
                 self.querySeq[i] = r1QuerySeq[ind]
-                self.queryQuals[i] = r1QueryQuals[ind]
+                self.queryQuals[i] = read1.query_qualities[ind]
 
-            self.mapping_quality = r1MapQual
+            self.mapping_quality = read1.mapping_quality
 
         # the alignment positions have the last and the first base aligned to already
         self.fragment_start = self.refPos[0]
         self.fragment_end = self.refPos[len(self.refPos) - 1]
-        self.refName = r1RefName
+        self.refName = read1.reference_name
 
     def getMismatches(self, minBQ):
         """get the mismatches contained in this fragment"""
