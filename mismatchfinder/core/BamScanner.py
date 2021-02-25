@@ -141,7 +141,11 @@ class BamScanner(Process):
             ):
                 # we add in this None value, so we have nothing stuck in the case where one does
                 # not pass the filter but the mate does not
-                if read.is_paired and not qname in readCache:
+                if (
+                    read.is_paired
+                    and not qname in readCache
+                    and read.reference_id == read.next_reference_id
+                ):
                     readCache[qname] = None
                 else:
                     # in this case, this IS the mate and if this is a proper read, we need to
@@ -232,7 +236,7 @@ class BamScanner(Process):
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
 
-        print(profiler.output_text(unicode=True, color=True))
+        print(prof.output_text(unicode=True, color=True))
         prof.output_html()
         # did we have an issue with reads?
         if nAlignedBases == 0:
