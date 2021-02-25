@@ -149,10 +149,10 @@ class BamScanner(Process):
                 nLowQualReads += 1
             else:
 
-                # if the read is properly paired, there is the chance of a
+                # if the read is paired, there is the chance of a
                 # overlap, so we instead store the read until we find the mate
                 # so that we can build a consensus
-                if read.is_paired:
+                if read.is_paired and read.reference_id == read.next_reference_id:
                     if qname not in readCache:
                         readCache[qname] = read
                         continue
@@ -524,9 +524,6 @@ def hasMisMatches(read):
 
 
 def makeConsensusRead(read1, read2):
-    # only make consensus if they align to the same chromosome
-    if not read1.reference_id == read2.reference_id:
-        return (read1, read2)
 
     # get the reference positions to see if read1 and 2 are aligned to the same area
     read1RefPos = read1.get_reference_positions(full_length=True)
