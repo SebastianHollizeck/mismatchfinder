@@ -524,6 +524,10 @@ def hasMisMatches(read):
 
 
 def makeConsensusRead(read1, read2):
+    # only make consensus if they align to the same chromosome
+    if not read1.reference_id == read2.reference_id:
+        return (read1, read2)
+
     # get the reference positions to see if read1 and 2 are aligned to the same area
     read1RefPos = read1.get_reference_positions(full_length=True)
     read2RefPos = read2.get_reference_positions(full_length=True)
