@@ -137,13 +137,13 @@ class BamScanner(Process):
             ):
                 # we add in this None value, so we have nothing stuck in the case where one does
                 # not pass the filter but the mate does not
-                if not qname in readCache:
+                if read.is_paired and not qname in readCache:
                     readCache[qname] = None
                 else:
                     # in this case, this IS the mate and if this is a proper read, we need to
                     # analyse it
                     mate = readCache[qname]
-                    if not mate is None and mate.is_proper_pair:
+                    if not mate is None:
                         reads = [readCache[qname]]
                     del readCache[qname]
                 nLowQualReads += 1
@@ -152,7 +152,7 @@ class BamScanner(Process):
                 # if the read is properly paired, there is the chance of a
                 # overlap, so we instead store the read until we find the mate
                 # so that we can build a consensus
-                if read.is_proper_pair:
+                if read.is_paired:
                     if qname not in readCache:
                         readCache[qname] = read
                         continue
