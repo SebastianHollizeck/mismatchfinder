@@ -524,20 +524,24 @@ def hasMisMatches(read):
 
 
 def makeConsensusRead(read1, read2):
-    # debug("Found proper pair, attemping to build consensus")
-    # we get the overlapping parts of the reads
-    # get all the info we need from read1
+    # get the reference positions to see if read1 and 2 are aligned to the same area
     read1RefPos = read1.get_reference_positions(full_length=True)
-    read1Seq = list(read1.query_sequence)
-    read1Quals = read1.query_qualities
-    read1IndDict = dict((k, i) for i, k in enumerate(read1RefPos))
-    # do the same with read 1
     read2RefPos = read2.get_reference_positions(full_length=True)
-    read2Seq = list(read2.query_sequence)
-    read2Quals = read2.query_qualities
-    read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
     # get the intersection of the reference positions of the two reads
     inter = set(read1RefPos).intersection(read2RefPos)
+
+    # we do this only if there is an intersection, so that we speed things up if there isnt
+    if len(inter) > 0:
+        read1Seq = list(read1.query_sequence)
+        read1Quals = read1.query_qualities
+        read1IndDict = dict((k, i) for i, k in enumerate(read1RefPos))
+
+        read2Seq = list(read2.query_sequence)
+        read2Quals = read2.query_qualities
+        read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
+    else:
+        # if there is no intersection, we just return the reads unchanged
+        return (read1, read2)
 
     # go through all of the overlaps and decide which of the reads is better
     for pos in inter:
