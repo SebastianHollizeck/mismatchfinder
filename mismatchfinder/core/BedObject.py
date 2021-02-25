@@ -69,11 +69,11 @@ class BedObject(object):
             # to (read.reference_name), then ask NCLS to find an overlap between the area where the
             # read aligned to (reference_start-reference_end) and the already stored bed file
             #
-            bedIt = list(
-                self.__ncls[read.reference_name].find_overlap(
-                    read.reference_start, read.reference_end
-                )
+
+            bedIt = self.__ncls[read.reference_name].has_overlaps(
+                array([read.reference_start]), array([read.reference_end]), array([0])
             )
+
         except KeyError:
             # in this case, there was no entry on the bedfile for this contig, so we assume it is not
             # blacklisted
@@ -101,11 +101,12 @@ class BedObject(object):
         #    f"startPos: {internalMisMatchStartPos} and endPos: {internalMisMatchEndPos}"
         # )
         try:
-            bedIt = list(
-                self.__ncls[chr].find_overlap(
-                    internalMisMatchStartPos, internalMisMatchEndPos
-                )
+            bedIt = self.__ncls[chr].has_overlaps(
+                array([internalMisMatchStartPos]),
+                array([internalMisMatchEndPos]),
+                arrary([0]),
             )
+
         except KeyError:
             return False
 
