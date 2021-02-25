@@ -238,9 +238,11 @@ class BamScanner(Process):
         self.logger.info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
-
+        # TODO remove after profiling
+        profiler.stop()
         print(prof.output_text(unicode=True, color=True))
         prof.output_html()
+
         # did we have an issue with reads?
         if nAlignedBases == 0:
             self.logger.error(
