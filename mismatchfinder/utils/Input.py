@@ -35,26 +35,26 @@ class InputParser(object):
         parser.add_argument(
             "-Q",
             "--baseQuality",
-            help="min base quality required to be counted as a variant",
+            help="min base quality required to be counted as a variant [default: %(default)s]",
             type=int,
             default=25,
         )
         parser.add_argument(
             "--minAverageBaseQuality",
-            help="min average base quality through the read to consider it in analysis",
+            help="min average base quality through the read to consider it in analysis [default: %(default)s]",
             type=int,
             default=25,
         )
         parser.add_argument(
             "-q",
             "--mappingQuality",
-            help="min mapping quality required for a read to be included",
+            help="min mapping quality required for a read to be included [default: %(default)s]",
             type=int,
-            default=25,
+            default=45,
         )
         parser.add_argument(
             "--maxMisMatchesPerRead",
-            help="maximum mismatches a read is allowed before it is discarded",
+            help="maximum mismatches a read is allowed before it is discarded [default: %(default)s]",
             type=int,
             default=7,
         )
@@ -79,6 +79,7 @@ class InputParser(object):
             "-o",
             "--outFileRoot",
             help="the file to write output to (will be created if not present)",
+            required=True,
             default=None,
         )
 
@@ -93,7 +94,7 @@ class InputParser(object):
         parser.add_argument(
             "-m",
             "--method",
-            help="The method to use to deconstruct signatures QP: Quadratic Programming ILM: Iterative Linear",
+            help="The method to use to deconstruct signatures QP: Quadratic Programming ILM: Iterative Linear [default: %(default)s]",
             choices=["QP", "ILM"],
             default="ILM",
         )
