@@ -12,6 +12,9 @@ from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.core.EndMotives import EndMotives
 from mismatchfinder.utils.Misc import countLowerCase
 
+# TODO: remove after profiling
+from pyinstrument import Profiler
+
 
 class BamScanner(Process):
     """Class which scans a Bam for TMB and other interesting features"""
@@ -94,7 +97,8 @@ class BamScanner(Process):
 
         # store the reads for which we do not have a partner yet
         readCache = {}
-
+        prof = Profiler()
+        prof.start()
         for read in bamFile.fetch(until_eof=True):
             nReads += 1
             # we check every 10K reads how uch time has passed and if it has been more than 30
@@ -228,6 +232,8 @@ class BamScanner(Process):
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
 
+        print(profiler.output_text(unicode=True, color=True))
+        prof.output_html()
         # did we have an issue with reads?
         if nAlignedBases == 0:
             self.logger.error(
