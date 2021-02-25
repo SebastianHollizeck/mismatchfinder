@@ -25,6 +25,8 @@ class BamScanner(Process):
         referenceFile,
         minMQ,
         minBQ,
+        minAvgBQ,
+        maxMisMatchesPerRead,
         blackList=None,
         whiteList=None,
         germObj=None,
