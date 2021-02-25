@@ -241,7 +241,7 @@ class BamScanner(Process):
         # TODO remove after profiling
         prof.stop()
         print(prof.output_text(unicode=True, color=True))
-        prof.output_html()
+        # prof.output_html()
 
         # did we have an issue with reads?
         if nAlignedBases == 0:
