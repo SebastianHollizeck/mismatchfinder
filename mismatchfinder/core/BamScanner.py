@@ -131,19 +131,20 @@ class BamScanner(Process):
             qname = read.query_name
             reads = []
             if (
+                # the assumption is that if this read is a duplicate, the mate should be as well
                 read.is_duplicate
                 or read.is_qcfail
                 or read.is_secondary
                 or read.is_supplementary
-                or read.is_unmapped
             ):
                 # in this case, we dont want to do anything with the read
                 nLowQualReads += 1
             elif (
                 read.mapping_quality < self.minMQ
                 or mean(read.query_qualities) < self.minAvgBQ
+                or read.is_unmapped
             ):
-                # in this case, we care about the info, that its not used
+                # in this case, we care about the info, that this end of the fragment is not used
                 # we add in this None value, so we have nothing stuck in the case where one does
                 # not pass the filter but the mate does not
                 if read.is_paired and not qname in readCache:
@@ -239,7 +240,7 @@ class BamScanner(Process):
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
         # TODO remove after profiling
-        profiler.stop()
+        prof.stop()
         print(prof.output_text(unicode=True, color=True))
         prof.output_html()
 
