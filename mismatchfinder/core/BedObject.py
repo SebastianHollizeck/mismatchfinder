@@ -88,6 +88,7 @@ class BedObject(object):
 
     # this is very similar to the read check, but we check again if the mismatch itself is also in
     # the region, because even though a read overlaps with a region, the mismatch could be outside
+    # TODO: maybe change this to a list of mismatched, so we can only do one call to ncls
     def isMisMatchWithinRegion(self, mismatch):
 
         chr, pos, refContext, altContext, misMatchClass = mismatch
