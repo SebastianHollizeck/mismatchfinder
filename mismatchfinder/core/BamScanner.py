@@ -136,9 +136,14 @@ class BamScanner(Process):
                 or read.is_secondary
                 or read.is_supplementary
                 or read.is_unmapped
-                or read.mapping_quality < self.minMQ
+            ):
+                # in this case, we dont want to do anything with the read
+                nLowQualReads += 1
+            elif (
+                read.mapping_quality < self.minMQ
                 or mean(read.query_qualities) < self.minAvgBQ
             ):
+                # in this case, we care about the info, that its not used
                 # we add in this None value, so we have nothing stuck in the case where one does
                 # not pass the filter but the mate does not
                 if read.is_paired and not qname in readCache:
