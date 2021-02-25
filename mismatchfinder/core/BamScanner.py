@@ -3,10 +3,9 @@ from logging import debug, error, info, basicConfig, getLogger
 from multiprocessing import Process
 from sys import getsizeof
 from collections import defaultdict
-from statistics import mean
 
 import pysam
-from numpy import array, quantile, sort
+from numpy import array, quantile, sort, mean
 
 from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.core.EndMotives import EndMotives
@@ -140,9 +139,9 @@ class BamScanner(Process):
                 # in this case, we dont want to do anything with the read
                 nLowQualReads += 1
             elif (
-                read.mapping_quality < self.minMQ
+                read.is_unmapped
+                or read.mapping_quality < self.minMQ
                 or mean(read.query_qualities) < self.minAvgBQ
-                or read.is_unmapped
             ):
                 # in this case, we care about the info, that this end of the fragment is not used
                 # we add in this None value, so we have nothing stuck in the case where one does
