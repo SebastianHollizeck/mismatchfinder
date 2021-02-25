@@ -40,11 +40,23 @@ class InputParser(object):
             default=25,
         )
         parser.add_argument(
+            "--minAverageBaseQuality",
+            help="min average base quality through the read to consider it in analysis",
+            type=int,
+            default=25,
+        )
+        parser.add_argument(
             "-q",
             "--mappingQuality",
             help="min mapping quality required for a read to be included",
             type=int,
             default=25,
+        )
+        parser.add_argument(
+            "--maxMisMatchesPerRead",
+            help="maximum mismatches a read is allowed before it is discarded",
+            type=int,
+            default=7,
         )
 
         parser.add_argument(
@@ -220,3 +232,6 @@ class InputParser(object):
         self.verbosity = params.verbosity.upper()
         self.threads = params.threads
         self.method = params.method
+
+        self.minAverageBaseQuality = params.minAverageBaseQuality
+        self.maxMisMatchesPerRead = params.maxMisMatchesPerRead

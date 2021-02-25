@@ -3,6 +3,7 @@ from logging import debug, error, info, basicConfig, getLogger
 from multiprocessing import Process
 from sys import getsizeof
 from collections import defaultdict
+from statistics import mean
 
 import pysam
 from numpy import array, quantile, sort
@@ -39,6 +40,8 @@ class BamScanner(Process):
 
         self.minMQ = minMQ
         self.minBQ = minBQ
+        self.minAvgBQ = minAvgBQ
+        self.maxMisMatchesPerRead = maxMisMatchesPerRead
 
         self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
@@ -88,7 +91,7 @@ class BamScanner(Process):
         )
 
         # store the reads for which we do not have a partner yet
-        read_dict = defaultdict(lambda: [None, None])
+        readCache = {}
 
         for read in bamFile.fetch(until_eof=True):
             nReads += 1
@@ -117,8 +120,10 @@ class BamScanner(Process):
                     )
                     currTime = now
 
-            # we only want proper reads and no secondaries. We can be pretty lenient here, because we
-            # check for the mismatch itself if the sequencing quality is high enough later.
+            # we only want proper reads and no secondaries. We can be pretty lenient here, because
+            # we check for the mismatch itself if the sequencing quality is high enough later.
+            qname = read.query_name
+            reads = []
             if (
                 read.is_duplicate
                 or read.is_qcfail
@@ -126,81 +131,97 @@ class BamScanner(Process):
                 or read.is_supplementary
                 or read.is_unmapped
                 or read.mapping_quality < self.minMQ
+                or mean(read.query_qualities) < self.minAvgBQ
             ):
+                # we add in this None value, so we have nothing stuck in the case where one does
+                # not pass the filter but the mate does not
+                if not qname in readCache:
+                    readCache[qname] = None
+                else:
+                    # in this case, this IS the mate and if this is a proper read, we need to
+                    # analyse it
+                    mate = readCache[qname]
+                    if not mate is None and mate.is_proper_pair:
+                        reads = [readCache[qname]]
+                    del readCache[qname]
                 nLowQualReads += 1
-                continue
             else:
 
                 # if the read is properly paired, there is the chance of a
                 # overlap, so we instead store the read until we find the mate
                 # so that we can build a consensus
-                qname = read.query_name
                 if read.is_proper_pair:
-                    if qname not in read_dict:
-                        read_dict[qname] = read
+                    if qname not in readCache:
+                        readCache[qname] = read
                         continue
                     else:
-                        read1, read2 = makeConsensusRead(read, read_dict[qname])
+                        mate = readCache[qname]
+                        if not mate is None:
+                            read1, read2 = makeConsensusRead(read, mate)
+                            reads = [read1, read2]
+                        else:
+                            # if the other read did not pass the quality check, we just use this
+                            reads = [read]
 
-                        del read_dict[qname]
-                        reads = [read1, read2]
+                        del readCache[qname]
+
                 else:
                     # if its not a proper pair, we just use it as is
                     reads = [read]
 
-                # now we execute this for the list of reads we created
-                for r in reads:
-                    # if we did get a blacklist and the read actually is within that region, we
-                    # discard it and keep a count on how many we discarded
-                    if (
-                        not self.blackList is None
-                        and self.blackList.isReadWithinRegion(r)
-                    ):
+            # now we execute this for the list of reads we created
+            for r in reads:
+                # if we did get a blacklist and the read actually is within that region, we
+                # discard it and keep a count on how many we discarded
+                if not self.blackList is None and self.blackList.isReadWithinRegion(r):
+                    nBlackListedReads += 1
+
+                else:
+                    # only analyse read in the whitelist region if there is one
+                    if self.whiteList is None or self.whiteList.isReadWithinRegion(r):
+                        # we only do our mismacth analysis if the read actually does have mismatches
+                        if not hasMisMatches(r):
+                            nNoMisMatchReads += 1
+                        else:
+                            # get all mismatches in this read
+                            tmpMisMatches = self.scanAlignedSegment(r)
+                            # store the mismatches and keep a record how often each was found
+                            for mm in tmpMisMatches:
+                                if mm in mutSites:
+                                    mutSites[mm] += 1
+                                else:
+                                    mutSites[mm] = 1
+                            # we also store the amount of mismatches found, so we can calculate
+                            # the mismatches per read which should be stable between samples
+                            nMisMatches += len(tmpMisMatches)
+
+                        # even if the fragment doesnt have any mismatches it is important to
+                        # store the fragment length of this read for fragment size statistics, but
+                        # only for the first read, because otherwise we just have everything twice
+                        if not r.is_paired or r.is_read1:
+                            fragLengths.append(abs(r.template_length))
+                        # single end reads will not have a template length
+                        # that is meaningfull for us, but its good to have
+                        # the info that it was single end in the final
+                        # result as
+                        # (number discordant reads == number of reads)
+
+                        # add the amount of bases of this read that were aligned
+                        nAlignedBases += r.query_alignment_length
+                        nAlignedReads += 1
+
+                        # we also care about the endmotives of the reads, so we store those
+                        self.endMotives.count(r)
+                    else:
                         nBlackListedReads += 1
 
-                    else:
-                        # only analyse read in the whitelist region if there is one
-                        if self.whiteList is None or self.whiteList.isReadWithinRegion(
-                            r
-                        ):
-                            # we only do our mismacth analysis if the read actually does have mismatches
-                            if not hasMisMatches(r):
-                                nNoMisMatchReads += 1
-                            else:
-                                # get all mismatches in this read
-                                tmpMisMatches = self.scanAlignedSegment(r)
-                                # store the mismatches and keep a record how often each was found
-                                for mm in tmpMisMatches:
-                                    if mm in mutSites:
-                                        mutSites[mm] += 1
-                                    else:
-                                        mutSites[mm] = 1
-                                # we also store the amount of mismatches found, so we can calculate
-                                # the mismatches per read which should be stable between samples
-                                nMisMatches += len(tmpMisMatches)
-
-                            # even if the fragment doesnt have any mismatches it is important to
-                            # store the fragment length of this read for fragment size statistics, but
-                            # only for the first read, because otherwise we just have everything twice
-                            if not r.is_paired or r.is_read1:
-                                fragLengths.append(abs(r.template_length))
-                            # single end reads will not have a template length
-                            # that is meaningfull for us, but its good to have
-                            # the info that it was single end in the final
-                            # result as
-                            # (number discordant reads == number of reads)
-
-                            # add the amount of bases of this read that were aligned
-                            nAlignedBases += r.query_alignment_length
-                            nAlignedReads += 1
-
-                            # we also care about the endmotives of the reads, so we store those
-                            self.endMotives.count(r)
-                        else:
-                            nBlackListedReads += 1
+        # at this point, there should be no more reads in our read storage, or we did something wrong
+        if len(readCache) != 0:
+            self.logger.error(
+                f"Found reads left over in the cache after the main loop, this is a bug {readCache}"
+            )
 
         # we are done so we update the status as well
-
         self.logger.info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
@@ -323,7 +344,9 @@ class BamScanner(Process):
 
         # we do this here, so we only do it once instead of in the loop
         alignedRefSequence = AlignedSegment.get_reference_sequence()
-        referencePositions = AlignedSegment.get_reference_positions(full_length=True)
+        referencePositions = array(
+            AlignedSegment.get_reference_positions(full_length=True)
+        )
         refIndDict = dict(
             (k, i) for i, k in enumerate(AlignedSegment.get_reference_positions())
         )
@@ -351,9 +374,7 @@ class BamScanner(Process):
                     debug(
                         f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
                     )
-                    tmpRef[refIndDict[contigPos]] = tmpRef[
-                        refIndDict[contigPos]
-                    ].upper()
+                    tmpRef[refIndDict[contigPos]] = seq.upper()
 
                     alignedRefSequence = "".join(tmpRef)
                     # but then we just skipr this corrected snp
@@ -472,6 +493,10 @@ class BamScanner(Process):
                 ):
                     # add to the found mutations now that everything is sorted out
                     mutations.append(mut)
+                    # if we go over the allowed amount of mismatches in this read, we return an
+                    # empty set of mismatches instead
+                    if len(mutations) > self.maxMisMatchesPerRead:
+                        return []
 
         return mutations
 
@@ -515,7 +540,7 @@ def makeConsensusRead(read1, read2):
     # go through all of the overlaps and decide which of the reads is better
     for pos in inter:
         # we might get a None, if there was softclipping, so we discard those
-        if pos == None:
+        if pos is None:
             continue
         read1IntPos = read1IndDict[pos]
         read2IntPos = read2IndDict[pos]
