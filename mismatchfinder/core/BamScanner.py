@@ -96,6 +96,10 @@ class BamScanner(Process):
 
         # store the reads for which we do not have a partner yet
         readCache = {}
+        # cache the wrapper for black and whitelist
+        isReadWhietListed = self.isReadInRegionOfInterest
+
+        # @TODO: disable this when done with profiling
         prof = Profiler()
         prof.start()
         for read in bamFile.fetch(until_eof=True):
@@ -129,36 +133,36 @@ class BamScanner(Process):
             # we check for the mismatch itself if the sequencing quality is high enough later.
             qname = read.query_name
             reads = []
-            if (
-                # the assumption is that if this read is a duplicate, the mate should be as well
-                read.is_duplicate
-                or read.is_qcfail
-                or read.is_secondary
-                or read.is_supplementary
-            ):
+            if read.is_qcfail or read.is_secondary or read.is_supplementary:
                 # in this case, we dont want to do anything with the read
                 nLowQualReads += 1
             elif (
                 read.is_unmapped
+                or read.is_duplicate
                 or read.mapping_quality < self.minMQ
                 or mean(read.query_qualities) < self.minAvgBQ
             ):
                 # in this case, we care about the info, that this end of the fragment is not used
                 # we add in this None value, so we have nothing stuck in the case where one does
                 # not pass the filter but the mate does not
-                if read.is_paired and not qname in readCache:
-                    # we only bother to add this, if the other read has a chance of an overlap
-                    if read.reference_id == read.next_reference_id:
-                        readCache[qname] = None
-                else:
-                    # in this case, this IS the mate and if this is a proper read, we need to
-                    # analyse it
-                    mate = readCache[qname]
-                    if not mate is None:
-                        reads = [readCache[qname]]
-                    del readCache[qname]
+                if read.is_paired:
+                    if not qname in readCache:
+                        # we only bother to add this, if the other read has a chance of an overlap
+                        if read.reference_id == read.next_reference_id:
+                            readCache[qname] = None
+                            continue
+                    else:
+                        # in this case, this IS the mate and if this is a proper read, we need to
+                        # analyse it
+                        mate = readCache[qname]
+                        if not mate is None:
+                            reads = [readCache[qname]]
+                        del readCache[qname]
+
                 nLowQualReads += 1
             else:
+                # get the blacklist status
+                readWhiteListed = isReadInRegionOfInterest(read)
 
                 # if the read is paired, there is the chance of a
                 # overlap, so we instead store the read until we find the mate
@@ -169,66 +173,78 @@ class BamScanner(Process):
                         continue
                     else:
                         mate = readCache[qname]
-                        if not mate is None:
+                        # see the blacklist staus of the mate
+                        mateWhiteListed = isReadInRegionOfInterest(mate)
+
+                        # if the mate is high quality its not none and both of the reads need
+                        # to be in the region of interest for an overlap to be within the region
+                        # of interest and if the consensus part isnt in the region of interest it
+                        # does not change anyhing and we can save computational time
+                        if not mate is None and (readWhiteListed and mateWhiteListed):
                             read1, read2 = makeConsensusRead(read, mate)
                             reads = [read1, read2]
                         else:
-                            # if the other read did not pass the quality check, we just use this
-                            reads = [read]
+                            # at this point only one of the two reads can be in the region of
+                            # interest
+                            if readWhiteListed:
+                                # in this case we do only analyse this read by itself
+                                reads = [read]
+                            if mateWhiteListed:
+                                # in this case we do only analyse the mate
+                                reads = [mate]
+
+                            # this means one of the reads  was high quality, but was not in a
+                            # region of interest
+                            nBlackListedReads += 1
 
                         del readCache[qname]
 
-                else:
-                    # if its not a proper pair, we just use it as is
+                elif readWhiteListed:
+                    # if its not a pair, we just use it as is if it is in the region of interest
                     reads = [read]
-
-            # now we execute this for the list of reads we created
-            for r in reads:
-                # if we did get a blacklist and the read actually is within that region, we
-                # discard it and keep a count on how many we discarded
-                if not self.blackList is None and self.blackList.isReadWithinRegion(r):
+                else:
+                    # this means the read was high quality, but either not whitelisted or was
+                    # blacklisted
                     nBlackListedReads += 1
 
+            # now we execute the mismatch finding for the reads that we selected (read + mate)
+            for r in reads:
+
+                if not hasMisMatches(r):
+                    nNoMisMatchReads += 1
                 else:
-                    # only analyse read in the whitelist region if there is one
-                    if self.whiteList is None or self.whiteList.isReadWithinRegion(r):
-                        # we only do our mismacth analysis if the read actually does have mismatches
-                        if not hasMisMatches(r):
-                            nNoMisMatchReads += 1
+                    # get all mismatches in this read
+                    tmpMisMatches = self.scanAlignedSegment(r)
+                    # store the mismatches and keep a record how often each was found
+                    for mm in tmpMisMatches:
+                        if mm in mutSites:
+                            mutSites[mm] += 1
                         else:
-                            # get all mismatches in this read
-                            tmpMisMatches = self.scanAlignedSegment(r)
-                            # store the mismatches and keep a record how often each was found
-                            for mm in tmpMisMatches:
-                                if mm in mutSites:
-                                    mutSites[mm] += 1
-                                else:
-                                    mutSites[mm] = 1
-                            # we also store the amount of mismatches found, so we can calculate
-                            # the mismatches per read which should be stable between samples
-                            nMisMatches += len(tmpMisMatches)
+                            mutSites[mm] = 1
+                    # we also store the amount of mismatches found, so we can calculate
+                    # the mismatches per read which should be stable between samples
+                    nMisMatches += len(tmpMisMatches)
 
-                        # even if the fragment doesnt have any mismatches it is important to
-                        # store the fragment length of this read for fragment size statistics, but
-                        # only for the first read, because otherwise we just have everything twice
-                        if not r.is_paired or r.is_read1:
-                            fragLengths.append(abs(r.template_length))
-                        # single end reads will not have a template length
-                        # that is meaningfull for us, but its good to have
-                        # the info that it was single end in the final
-                        # result as
-                        # (number discordant reads == number of reads)
+                # even if the fragment doesnt have any mismatches it is important to
+                # store the fragment length of this read for fragment size statistics, but
+                # only for the first read, because otherwise we just have everything twice
+                if not r.is_paired or r.is_read1:
+                    fragLengths.append(abs(r.template_length))
+                # single end reads will not have a template length
+                # that is meaningfull for us, but its good to have
+                # the info that it was single end in the final
+                # result as
+                # (number discordant reads == number of reads)
 
-                        # add the amount of bases of this read that were aligned
-                        nAlignedBases += r.query_alignment_length
-                        nAlignedReads += 1
+                # add the amount of bases of this read that were aligned
+                nAlignedBases += r.query_alignment_length
+                nAlignedReads += 1
 
-                        # we also care about the endmotives of the reads, so we store those
-                        self.endMotives.count(r)
-                    else:
-                        nBlackListedReads += 1
+                # we also care about the endmotives of the reads, so we store those
+                self.endMotives.count(r)
 
-        # at this point, there should be no more reads in our read storage, or we did something wrong
+        # at this point, there should be no more reads in our read storage, or we did something
+        # wrong (or the bam is truncated in some test case)
         if len(readCache) != 0:
             self.logger.error(
                 f"Found reads left over in the cache after the main loop, this is a bug {readCache}"
@@ -299,6 +315,21 @@ class BamScanner(Process):
             nAlignedBases=nAlignedBases,
             bam=self.bamFilePath.name,
         )
+
+    # this is a wrapper for the check for black and whitelist
+    def isReadInRegionOfInterest(self, read):
+        if read is None:
+            # if we get a None, we have to assume its blacklisted
+            return False
+        # if we have a blacklist and the read fits, then we have a blacklisted read
+        if not self.blackList is None and self.blackList.isReadWithinRegion(read):
+            return False
+        # if we have a whitelist and the read does NOT overlap, then its blacklisted
+        elif not self.whiteList is None and not self.whiteList.isReadWithinRegion(read):
+            return False
+        else:
+            # well otherwise its not blacklisted and can be used
+            return True
 
     def run(self):
 
