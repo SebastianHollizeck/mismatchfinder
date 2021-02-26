@@ -97,7 +97,7 @@ class BamScanner(Process):
         # store the reads for which we do not have a partner yet
         readCache = {}
         # cache the wrapper for black and whitelist
-        isReadWhietListed = self.isReadInRegionOfInterest
+        isReadInRegionOfInterest = self.isReadInRegionOfInterest
 
         # @TODO: disable this when done with profiling
         prof = Profiler()
