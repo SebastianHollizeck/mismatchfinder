@@ -105,7 +105,7 @@ class BedObject(object):
             bedIt = self.__ncls[chr].has_overlaps(
                 array([internalMisMatchStartPos]),
                 array([internalMisMatchEndPos]),
-                arrary([0]),
+                array([0]),
             )
 
         except KeyError:
