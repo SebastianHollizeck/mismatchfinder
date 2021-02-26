@@ -535,7 +535,9 @@ class BamScanner(Process):
                 ):
                     # we do nothing here, because the mismatch is outside the region of interest
                     append = False
-                    debug(f"read: {read} is not blacklisted, but mut {mut} is")
+                    debug(
+                        f"read: {AlignedSegment.query_name} is not blacklisted, but mut {mut} is"
+                    )
 
                 elif self.whiteList is None or self.whiteList.isMisMatchWithinRegion(
                     mut
