@@ -12,7 +12,7 @@ from mismatchfinder.core.EndMotives import EndMotives
 from mismatchfinder.utils.Misc import countLowerCase
 
 # TODO: remove after profiling
-from pyinstrument import Profiler
+# from pyinstrument import Profiler
 
 
 class BamScanner(Process):
@@ -99,9 +99,10 @@ class BamScanner(Process):
         # cache the wrapper for black and whitelist
         isReadInRegionOfInterest = self.isReadInRegionOfInterest
 
-        # @TODO: disable this when done with profiling
-        prof = Profiler()
-        prof.start()
+        # Profiling revealed, the most time is spent in isReadInRegionOfInterest closely followed
+        # by the mean function
+        # prof = Profiler()
+        # prof.start()
         for read in bamFile.fetch(until_eof=True):
             nReads += 1
             # we check every 10K reads how uch time has passed and if it has been more than 30
@@ -255,8 +256,8 @@ class BamScanner(Process):
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
         # TODO remove after profiling
-        prof.stop()
-        print(prof.output_text(unicode=True, color=True))
+        # prof.stop()
+        # print(prof.output_text(unicode=True, color=True))
         # prof.output_html()
 
         # did we have an issue with reads?
