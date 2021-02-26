@@ -64,26 +64,25 @@ class BedObject(object):
 
     # check if the read is aligned to any blacklisted area (again NCLS does the heavy lifting)
     def isReadWithinRegion(self, read):
-        try:
-            # the idea is to retrieve the NCLS object which correcponds to the contig the read mapped
-            # to (read.reference_name), then ask NCLS to find an overlap between the area where the
-            # read aligned to (reference_start-reference_end) and the already stored bed file
-            #
 
+        # the idea is to retrieve the NCLS object which correcponds to the contig the read mapped
+        # to (read.reference_name), then ask NCLS to find an overlap between the area where the
+        # read aligned to (reference_start-reference_end) and the already stored bed file
+        #
+        if read.reference_name in self.__ncls:
             bedIt = self.__ncls[read.reference_name].has_overlaps(
                 array([read.reference_start]), array([read.reference_end]), array([0])
             )
 
-        except KeyError:
-            # in this case, there was no entry on the bedfile for this contig, so we assume it is not
-            # blacklisted
-            return False
+            # now that that worked, we just need to see if we have any overlaps at all. and if we do, we
+            # can confidently say that this read is blacklisted
+            if len(bedIt) > 0:
+                return True
+            else:
+                return False
 
-        # now that that worked, we just need to see if we have any overlaps at all. and if we do, we
-        # can confidently say that this read is blacklisted
-        if len(bedIt) > 0:
-            return True
         else:
+            # if the reference contig is not in the object, its not in the region
             return False
 
     # this is very similar to the read check, but we check again if the mismatch itself is also in
@@ -98,21 +97,16 @@ class BedObject(object):
         # the end pos is always the pos after the center pos
         internalMisMatchEndPos = pos + 2
 
-        # print(
-        #    f"startPos: {internalMisMatchStartPos} and endPos: {internalMisMatchEndPos}"
-        # )
-        try:
+        if chr in self.__ncls:
             bedIt = self.__ncls[chr].has_overlaps(
                 array([internalMisMatchStartPos]),
                 array([internalMisMatchEndPos]),
                 array([0]),
             )
-
-        except KeyError:
-            return False
-
-        # and now we decide if there was an overlap
-        if len(bedIt) > 0:
-            return True
+            # and now we decide if there was an overlap
+            if len(bedIt) > 0:
+                return True
+            else:
+                return False
         else:
             return False
