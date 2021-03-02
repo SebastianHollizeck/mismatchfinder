@@ -43,7 +43,7 @@ class InputParser(object):
             "--minAverageBaseQuality",
             help="min average base quality through the read to consider it in analysis [default: %(default)s]",
             type=int,
-            default=25,
+            default=20,
         )
         parser.add_argument(
             "-q",
