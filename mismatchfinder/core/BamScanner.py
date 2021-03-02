@@ -399,7 +399,7 @@ class BamScanner(Process):
         refIndDict = dict(
             (k, i) for i, k in enumerate(AlignedSegment.get_reference_positions())
         )
-
+        query_qualities = AlignedSegment.query_qualities
         # loop through the read
         for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
             with_seq=True, matches_only=True
@@ -419,23 +419,14 @@ class BamScanner(Process):
                     # the sequence
                     tmpRef = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
-                    mdStr = AlignedSegment.get_tag("MD")
-                    debug(
-                        f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
-                    )
+                    # mdStr = AlignedSegment.get_tag("MD")
+                    # debug(
+                    #     f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
+                    # )
                     tmpRef[refIndDict[contigPos]] = seq.upper()
 
                     alignedRefSequence = "".join(tmpRef)
                     # but then we just skipr this corrected snp
-                    continue
-
-                # we really only want high quality mismatches
-                # we need to do this before we do the softclip adjustment
-                # because the base qualities are not soft clipped
-                qual = AlignedSegment.query_qualities[readPos]
-
-                # if the quality of the base is too low, we drop this
-                if qual < self.minBQ:
                     continue
 
                 # offset the soft cliping at the beginning
@@ -480,9 +471,19 @@ class BamScanner(Process):
                 elif refContext[0].islower():
                     # this means its a DBS
                     misMatchClass = 2
+                    # in this case, we check if the average of the two quals is higher than the
+                    # min bq
+                    # if the quality of the base is too low, we drop this
+                    if (
+                        query_qualities[refIndex] + query_qualities[refIndex]
+                    ) / 2 < self.minBQ:
+                        continue
                 else:
                     # and this is a SBS
                     misMatchClass = 1
+                    # if the quality of the base is too low, we drop this
+                    if query_qualities[refIndex] < self.minBQ:
+                        continue
 
                 # however we would get the last position of a 3bp mismatch as a dinucleotide change,
                 # which we do not want so we also check if there are more than 2 variants within 4
