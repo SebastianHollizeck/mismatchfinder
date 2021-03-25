@@ -475,7 +475,7 @@ class BamScanner(Process):
                     # min bq
                     # if the quality of the base is too low, we drop this
                     if (
-                        query_qualities[refIndex] + query_qualities[refIndex]
+                        query_qualities[refIndex] + query_qualities[refIndex - 1]
                     ) / 2 < self.minBQ:
                         continue
                 else:
