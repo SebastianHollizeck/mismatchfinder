@@ -396,14 +396,26 @@ class BamScanner(Process):
         referencePositions = array(
             AlignedSegment.get_reference_positions(full_length=True)
         )
-        refIndDict = dict(
-            (k, i) for i, k in enumerate(AlignedSegment.get_reference_positions())
-        )
+        # this is a store to see where in the reference sequence we are, because its not possible to
+        # calculate back from the aligned pairs
+        # we start with -1 so that we can increase it in the beginning and not in the end of the
+        # loop
+        rpos = -1
         query_qualities = AlignedSegment.query_qualities
         # loop through the read
         for (readPos, contigPos, seq) in AlignedSegment.get_aligned_pairs(
-            with_seq=True, matches_only=True
+            with_seq=True, matches_only=False
         ):
+            # if the contigPos is None, that means we have an insertion (or softclipping) which we
+            # skip without increasing the reference sequence pos
+            if contigPos is None:
+                continue
+
+            # if readPos is none, that means its a deletion, which means the refpos need to be
+            # advanced and we can skip this, because its not a mismatch
+            rpos += 1
+            if readPos is None:
+                continue
 
             # if it is lower case it symbolises a mismatch
             if seq.islower():
@@ -418,10 +430,11 @@ class BamScanner(Process):
                     # the MD string which we kinda fucked up by changing
                     # the sequence
                     tmpRef = list(alignedRefSequence)
-                    mappedPos = readPos - AlignedSegment.query_alignment_start
+
                     # mdStr = AlignedSegment.get_tag("MD")
-                    # we need +1 because pysam is 0 based
-                    tmpRef[refIndDict[contigPos] + 1] = seq.upper()
+                    # we need actually cant really do this properly, because there isnt a good way
+                    # to get back to the position in the template if there is a deletion
+                    tmpRef[rpos] = seq.upper()
 
                     alignedRefSequence = "".join(tmpRef)
                     # but then we just skip this corrected snp
@@ -429,7 +442,8 @@ class BamScanner(Process):
 
                 # offset the soft cliping at the beginning
                 readPos = readPos - AlignedSegment.query_alignment_start
-                # offset the reference location
+                # offset the reference location (this could probably be substituted by rpos but i
+                # dont have enough time to debug it, so this stays)
                 templatePos = contigPos - AlignedSegment.reference_start
 
                 # if everything is right, we get the trinucl context of the mismatch in the reference
