@@ -420,13 +420,11 @@ class BamScanner(Process):
                     tmpRef = list(alignedRefSequence)
                     mappedPos = readPos - AlignedSegment.query_alignment_start
                     # mdStr = AlignedSegment.get_tag("MD")
-                    # debug(
-                    #     f"correcting pos {mappedPos} of read {AlignedSegment.qname} with md {mdStr} from {seq} to {seq.upper()} after read error correction with mate"
-                    # )
-                    tmpRef[refIndDict[contigPos]] = seq.upper()
+                    # we need +1 because pysam is 0 based
+                    tmpRef[refIndDict[contigPos] + 1] = seq.upper()
 
                     alignedRefSequence = "".join(tmpRef)
-                    # but then we just skipr this corrected snp
+                    # but then we just skip this corrected snp
                     continue
 
                 # offset the soft cliping at the beginning
