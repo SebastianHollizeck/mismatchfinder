@@ -218,7 +218,7 @@ class BamScanner(Process):
                 else:
 
                     # only do the analysis when the fragment is small
-                    if r.template_length <= self.maxFragmentLength:
+                    if abs(r.template_length) <= self.maxFragmentLength:
                         # get all mismatches in this read
                         tmpMisMatches = self.scanAlignedSegment(r)
                         # store the mismatches and keep a record how often each was found
