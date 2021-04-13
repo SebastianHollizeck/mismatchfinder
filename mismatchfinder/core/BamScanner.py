@@ -29,6 +29,7 @@ class BamScanner(Process):
         minBQ,
         minAvgBQ,
         maxMisMatchesPerRead,
+        maxFragLength,
         blackList=None,
         whiteList=None,
         germObj=None,
@@ -46,6 +47,7 @@ class BamScanner(Process):
         self.minBQ = minBQ
         self.minAvgBQ = minAvgBQ
         self.maxMisMatchesPerRead = maxMisMatchesPerRead
+        self.maxFragmentLength = maxFragLength
 
         self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
@@ -214,17 +216,20 @@ class BamScanner(Process):
                 if not hasMisMatches(r):
                     nNoMisMatchReads += 1
                 else:
-                    # get all mismatches in this read
-                    tmpMisMatches = self.scanAlignedSegment(r)
-                    # store the mismatches and keep a record how often each was found
-                    for mm in tmpMisMatches:
-                        if mm in mutSites:
-                            mutSites[mm] += 1
-                        else:
-                            mutSites[mm] = 1
-                    # we also store the amount of mismatches found, so we can calculate
-                    # the mismatches per read which should be stable between samples
-                    nMisMatches += len(tmpMisMatches)
+
+                    # only do the analysis when the fragment is small
+                    if r.template_length <= self.maxFragmentLength:
+                        # get all mismatches in this read
+                        tmpMisMatches = self.scanAlignedSegment(r)
+                        # store the mismatches and keep a record how often each was found
+                        for mm in tmpMisMatches:
+                            if mm in mutSites:
+                                mutSites[mm] += 1
+                            else:
+                                mutSites[mm] = 1
+                        # we also store the amount of mismatches found, so we can calculate
+                        # the mismatches per read which should be stable between samples
+                        nMisMatches += len(tmpMisMatches)
 
                 # even if the fragment doesnt have any mismatches it is important to
                 # store the fragment length of this read for fragment size statistics, but

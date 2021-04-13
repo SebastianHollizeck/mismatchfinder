@@ -58,6 +58,12 @@ class InputParser(object):
             type=int,
             default=7,
         )
+        parser.add_argument(
+            "--maxFragmentLength",
+            help="maximum fragment length for a read to be considered for analysis [default: %(default)s] -1 corresponds to unlimited",
+            type=int,
+            default=-1,
+        )
 
         parser.add_argument(
             "-t",
@@ -236,3 +242,8 @@ class InputParser(object):
 
         self.minAverageBaseQuality = params.minAverageBaseQuality
         self.maxMisMatchesPerRead = params.maxMisMatchesPerRead
+
+        if params.maxFragmentLength == -1:
+            self.maxFragmentLength = float("inf")
+        else:
+            self.maxFragmentLength = params.maxFragmentLength
