@@ -30,6 +30,7 @@ class BamScanner(Process):
         minAvgBQ,
         maxMisMatchesPerRead,
         maxFragLength,
+        filterSecondaries=True,
         blackList=None,
         whiteList=None,
         germObj=None,
@@ -48,6 +49,7 @@ class BamScanner(Process):
         self.minAvgBQ = minAvgBQ
         self.maxMisMatchesPerRead = maxMisMatchesPerRead
         self.maxFragmentLength = maxFragLength
+        self.filterSecondaries = filterSecondaries
 
         self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
@@ -83,6 +85,7 @@ class BamScanner(Process):
         nMisMatches = 0
         nAlignedBases = 0
         nAlignedReads = 0
+        nSecondaryHits = 0
 
         # store the fragment lengths for later
         fragLengths = []
@@ -215,6 +218,8 @@ class BamScanner(Process):
 
                 if not hasMisMatches(r):
                     nNoMisMatchReads += 1
+                elif self.filterSecondaries and hasSecondaryMatches(r):
+                    nSecondaryHits += 1
                 else:
 
                     # only do the analysis when the fragment is small
@@ -588,6 +593,17 @@ def hasMisMatches(read):
         # but if there is a ValueError we know there is more in there than that (could be an indel
         # as well, but we have to look closer to actually check that)
         return True
+
+
+# we might need to discard read, which also map to different locations
+def hasSecondaryMatches(read):
+    # if there is no XA tag (KeyError), then there is no secondary
+    # but if it doesnt fail, we have secondary hits
+    try:
+        xa = read.get_tag("XA")
+        return True
+    except KeyError:
+        return False
 
 
 def makeConsensusRead(read1, read2):
