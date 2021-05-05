@@ -592,6 +592,17 @@ def hasMisMatches(read):
 
 def makeConsensusRead(read1, read2):
 
+    # we can just check, if there are overlaps from just the start and end pos, which is significant
+    # ly faster than using the md str
+    if (
+        read1.reference_start < read2.reference_start
+        and read1.reference_end > read2.reference_start
+    ) or (
+        read1.reference_start > read2.reference_start
+        and read1.reference_start < read2.reference_end
+    ):
+        return (read1, read2)
+
     # get the reference positions to see if read1 and 2 are aligned to the same area
     read1RefPos = read1.get_reference_positions(full_length=True)
     read2RefPos = read2.get_reference_positions(full_length=True)
@@ -608,7 +619,8 @@ def makeConsensusRead(read1, read2):
         read2Quals = read2.query_qualities
         read2IndDict = dict((k, i) for i, k in enumerate(read2RefPos))
     else:
-        # if there is no intersection, we just return the reads unchanged
+        # if there is no intersection, we just return the reads unchanged (this shouldnt happen,
+        # because we checked the template length before, but sure)
         return (read1, read2)
 
     # go through all of the overlaps and decide which of the reads is better
