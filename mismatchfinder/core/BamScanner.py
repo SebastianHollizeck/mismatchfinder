@@ -5,6 +5,7 @@ from sys import getsizeof
 from collections import defaultdict
 
 import pysam
+import re
 from numpy import array, quantile, sort, mean
 
 from mismatchfinder.results.Results import MismatchCandidates
@@ -64,6 +65,12 @@ class BamScanner(Process):
 
         self.logger = log
         self.logLevel = log.level
+
+        # this pattern will match the MDString of reads with at least 1, up to a maximum of
+        # maxMisMatchesPerRead mismatches in a read
+        self.MDstrPattern = re.compile(
+            r"\d+([ACGT]\d+){1," + str(maxMisMatchesPerRead) + "}"
+        )
 
     # this function gets all sites of mismatches from any mapped read in a bam
     # use qualThreshold, bedObj and minMQ to exclude reads and mismatches
@@ -216,7 +223,7 @@ class BamScanner(Process):
             # now we execute the mismatch finding for the reads that we selected (read + mate)
             for r in reads:
 
-                if not hasMisMatches(r):
+                if not self.hasNMisMatches(r):
                     nNoMisMatchReads += 1
                 elif self.filterSecondaries and hasSecondaryMatches(r):
                     nSecondaryHits += 1
@@ -567,32 +574,25 @@ class BamScanner(Process):
                 ):
                     # add to the found mutations now that everything is sorted out
                     mutations.append(mut)
-                    # if we go over the allowed amount of mismatches in this read, we return an
-                    # empty set of mismatches instead
-                    if len(mutations) > self.maxMisMatchesPerRead:
-                        return []
 
         return mutations
 
+    # this is a simple check if a MDstring contains a certain number of mismatches
+    # we make this a method, so we can use the same precompiled pattern
+    def hasNMisMatches(self, read):
+        # if there is no MD tag we cant do this, so we just say it does not have mismatches
+        try:
+            mdStr = read.get_tag("MD")
+        except KeyError:
+            # this occures only in unmapped reads so we cant actually say if there are mismatches
+            return False
 
-# this is a simple check if a MDstring contains any mismatches
-def hasMisMatches(read):
-    # if there is no MD tag we cant do this, so we just say it does not have mismatches
-    try:
-        mdStr = read.get_tag("MD")
-    except KeyError:
-        # this occures only in unmapped reads so we cant actually say if there are mismatches
-        return False
-
-    try:
-        # if the whole string is just an int it tells us all positions were matches and no
-        # mismatches
-        mdInt = int(mdStr)
-        return False
-    except ValueError:
-        # but if there is a ValueError we know there is more in there than that (could be an indel
-        # as well, but we have to look closer to actually check that)
-        return True
+        # use the mdstr pattern, which allows a set number of mismatches, if the pattern doesnt
+        # match it will return none
+        if re.fullmatch(self.MDstrPattern, mdStr) is None:
+            return False
+        else:
+            return True
 
 
 # we might need to discard read, which also map to different locations
