@@ -206,6 +206,8 @@ class BamScanner(Process):
                         else:
                             # we discard this read if we look at only the overlapping regions of R1 and 2
                             if self.onlyOverlap:
+                                # need to delete this here, otherwise i have to restructure more code
+                                del readCache[qname]
                                 continue
 
                             # at this point only one of the two reads can be in the region of
