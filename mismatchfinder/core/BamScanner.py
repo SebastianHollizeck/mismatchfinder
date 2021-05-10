@@ -32,6 +32,7 @@ class BamScanner(Process):
         maxMisMatchesPerRead,
         maxFragLength,
         filterSecondaries=True,
+        onlyOverlap=True,
         blackList=None,
         whiteList=None,
         germObj=None,
@@ -51,6 +52,7 @@ class BamScanner(Process):
         self.maxMisMatchesPerRead = maxMisMatchesPerRead
         self.maxFragmentLength = maxFragLength
         self.filterSecondaries = filterSecondaries
+        self.onlyOverlap = onlyOverlap
 
         self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
@@ -171,6 +173,9 @@ class BamScanner(Process):
                         if not mate is None:
                             reads = [readCache[qname]]
                         del readCache[qname]
+                        # we discard this read if we look at only the overlapping regions of R1 and 2
+                        if self.onlyOverlap:
+                            continue
 
                 nLowQualReads += 1
             else:
@@ -194,9 +199,15 @@ class BamScanner(Process):
                         # of interest and if the consensus part isnt in the region of interest it
                         # does not change anyhing and we can save computational time
                         if not mate is None and (readWhiteListed and mateWhiteListed):
-                            read1, read2 = makeConsensusRead(read, mate)
+                            read1, read2 = makeConsensusRead(
+                                read, mate, onlyOverlap=self.onlyOverlap
+                            )
                             reads = [read1, read2]
                         else:
+                            # we discard this read if we look at only the overlapping regions of R1 and 2
+                            if self.onlyOverlap:
+                                continue
+
                             # at this point only one of the two reads can be in the region of
                             # interest
                             if readWhiteListed:
@@ -213,6 +224,9 @@ class BamScanner(Process):
                         del readCache[qname]
 
                 elif readWhiteListed:
+                    # we discard this read if we look at only the overlapping regions of R1 and 2
+                    if self.onlyOverlap:
+                        continue
                     # if its not a pair, we just use it as is if it is in the region of interest
                     reads = [read]
                 else:
@@ -223,7 +237,7 @@ class BamScanner(Process):
             # now we execute the mismatch finding for the reads that we selected (read + mate)
             for r in reads:
 
-                if not self.hasNMisMatches(r):
+                if not hasNMisMatches(r, self.MDstrPattern):
                     nNoMisMatchReads += 1
                 elif self.filterSecondaries and hasSecondaryMatches(r):
                     nSecondaryHits += 1
@@ -577,22 +591,23 @@ class BamScanner(Process):
 
         return mutations
 
-    # this is a simple check if a MDstring contains a certain number of mismatches
-    # we make this a method, so we can use the same precompiled pattern
-    def hasNMisMatches(self, read):
-        # if there is no MD tag we cant do this, so we just say it does not have mismatches
-        try:
-            mdStr = read.get_tag("MD")
-        except KeyError:
-            # this occures only in unmapped reads so we cant actually say if there are mismatches
-            return False
 
-        # use the mdstr pattern, which allows a set number of mismatches, if the pattern doesnt
-        # match it will return none
-        if re.fullmatch(self.MDstrPattern, mdStr) is None:
-            return False
-        else:
-            return True
+# this is a simple check if a MDstring contains a certain number of mismatches
+# we make this a method, so we can use the same precompiled pattern
+def hasNMisMatches(read, pattern):
+    # if there is no MD tag we cant do this, so we just say it does not have mismatches
+    try:
+        mdStr = read.get_tag("MD")
+    except KeyError:
+        # this occures only in unmapped reads so we cant actually say if there are mismatches
+        return False
+
+    # use the mdstr pattern, which allows a set number of mismatches, if the pattern doesnt
+    # match it will return none
+    if re.fullmatch(pattern, mdStr) is None:
+        return False
+    else:
+        return True
 
 
 # we might need to discard read, which also map to different locations
@@ -606,16 +621,15 @@ def hasSecondaryMatches(read):
         return False
 
 
-def makeConsensusRead(read1, read2):
+# calculates the consensus of two reads and can also set the non overlapping part to base quality 0
+# so that it will not be analysed further
+def makeConsensusRead(read1, read2, onlyOverlap=False):
 
     # we can just check, if there are overlaps from just the start and end pos, which is significant
     # ly faster than using the md str
     if (
-        read1.reference_start < read2.reference_start
-        and read1.reference_end > read2.reference_start
-    ) or (
-        read1.reference_start > read2.reference_start
-        and read1.reference_start < read2.reference_end
+        read1.reference_end < read2.reference_start
+        or read1.reference_start > read2.reference_end
     ):
         return (read1, read2)
 
@@ -711,6 +725,15 @@ def makeConsensusRead(read1, read2):
             elif read1Quals[read1IntPos] < read2Quals[read2IntPos]:
                 read1Seq[read1IntPos] = read2Seq[read2IntPos]
                 read1Quals[read1IntPos] = 0
+
+    if onlyOverlap:
+        # here we set every position that was not in the intersection to BQ 0
+        for k, intPos in enumerate(read1RefPos):
+            if not intPos in inter:
+                read1Quals[k] = 0
+        for k, intPos in enumerate(read2RefPos):
+            if not intPos in inter:
+                read2Quals[k] = 0
 
     # finally we have to create new reads
     read1New = read1
