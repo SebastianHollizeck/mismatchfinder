@@ -97,6 +97,8 @@ def main():
             minAvgBQ=inputs.minAverageBaseQuality,
             maxMisMatchesPerRead=inputs.maxMisMatchesPerRead,
             maxFragLength=inputs.maxFragmentLength,
+            onlyOverlap=inputs.onlyOverlap,
+            writeEvidenceBam=inputs.writeEvidenceBam,
             blackList=blackList,
             whiteList=whiteList,
             semaphore=semaphore,

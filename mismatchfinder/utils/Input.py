@@ -64,6 +64,12 @@ class InputParser(object):
             type=int,
             default=-1,
         )
+        parser.add_argument(
+            "--onlyOverlap",
+            help="only consider the overlapping part of the paired end fragment [default: %(default)s]",
+            action="store_true",
+        )
+        parser.set_defaults(onlyOverlap=False)
 
         parser.add_argument(
             "-t",
@@ -248,6 +254,7 @@ class InputParser(object):
 
         self.minAverageBaseQuality = params.minAverageBaseQuality
         self.maxMisMatchesPerRead = params.maxMisMatchesPerRead
+        self.onlyOverlap = params.onlyOverlap
         self.writeEvidenceBam = params.writeEvidenceBam
 
         if params.maxFragmentLength == -1:
