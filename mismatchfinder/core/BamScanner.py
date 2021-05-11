@@ -202,7 +202,12 @@ class BamScanner(Process):
                             read1, read2 = makeConsensusRead(
                                 read, mate, onlyOverlap=self.onlyOverlap
                             )
-                            reads = [read1, read2]
+                            # if there was no overlap, but onlyOverlap was true, the reads will
+                            # both be None, so we can skip them
+                            if read1 is None:
+                                reads = []
+                            else:
+                                reads = [read1, read2]
                         else:
                             # we discard this read if we look at only the overlapping regions of R1 and 2
                             if self.onlyOverlap:
@@ -633,6 +638,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False):
         read1.reference_end < read2.reference_start
         or read1.reference_start > read2.reference_end
     ):
+        if onlyOverlap:
+            return (None, None)
         return (read1, read2)
 
     # get the reference positions to see if read1 and 2 are aligned to the same area
