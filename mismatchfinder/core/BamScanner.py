@@ -33,6 +33,7 @@ class BamScanner(Process):
         maxFragLength,
         filterSecondaries=True,
         onlyOverlap=True,
+        strictOverlap=True,
         blackList=None,
         whiteList=None,
         germObj=None,
@@ -53,6 +54,7 @@ class BamScanner(Process):
         self.maxFragmentLength = maxFragLength
         self.filterSecondaries = filterSecondaries
         self.onlyOverlap = onlyOverlap
+        self.strictOverlap = strictOverlap
 
         self.bamFilePath = bamFilePath
         self.referenceFile = referenceFile
@@ -95,6 +97,7 @@ class BamScanner(Process):
         nAlignedBases = 0
         nAlignedReads = 0
         nSecondaryHits = 0
+        nFragSize = 0
 
         # store the fragment lengths for later
         fragLengths = []
@@ -171,11 +174,8 @@ class BamScanner(Process):
                         # analyse it
                         mate = readCache[qname]
                         if not mate is None:
-                            reads = [readCache[qname]]
+                            reads = [mate]
                         del readCache[qname]
-                        # we discard this read if we look at only the overlapping regions of R1 and 2
-                        if self.onlyOverlap:
-                            continue
 
                 nLowQualReads += 1
             else:
@@ -209,11 +209,6 @@ class BamScanner(Process):
                             else:
                                 reads = [read1, read2]
                         else:
-                            # we discard this read if we look at only the overlapping regions of R1 and 2
-                            if self.onlyOverlap:
-                                # need to delete this here, otherwise i have to restructure more code
-                                del readCache[qname]
-                                continue
 
                             # at this point only one of the two reads can be in the region of
                             # interest
@@ -231,9 +226,6 @@ class BamScanner(Process):
                         del readCache[qname]
 
                 elif readWhiteListed:
-                    # we discard this read if we look at only the overlapping regions of R1 and 2
-                    if self.onlyOverlap:
-                        continue
                     # if its not a pair, we just use it as is if it is in the region of interest
                     reads = [read]
                 else:
@@ -241,28 +233,10 @@ class BamScanner(Process):
                     # blacklisted
                     nBlackListedReads += 1
 
-            # now we execute the mismatch finding for the reads that we selected (read + mate)
+            # prefilter the reads in case we only want to analyse the reads if BOTH reads pass
+            # all filters
+            scanList = []
             for r in reads:
-
-                if not hasNMisMatches(r, self.MDstrPattern):
-                    nNoMisMatchReads += 1
-                elif self.filterSecondaries and hasSecondaryMatches(r):
-                    nSecondaryHits += 1
-                else:
-
-                    # only do the analysis when the fragment is small
-                    if abs(r.template_length) <= self.maxFragmentLength:
-                        # get all mismatches in this read
-                        tmpMisMatches = self.scanAlignedSegment(r)
-                        # store the mismatches and keep a record how often each was found
-                        for mm in tmpMisMatches:
-                            if mm in mutSites:
-                                mutSites[mm] += 1
-                            else:
-                                mutSites[mm] = 1
-                        # we also store the amount of mismatches found, so we can calculate
-                        # the mismatches per read which should be stable between samples
-                        nMisMatches += len(tmpMisMatches)
 
                 # even if the fragment doesnt have any mismatches it is important to
                 # store the fragment length of this read for fragment size statistics, but
@@ -281,6 +255,37 @@ class BamScanner(Process):
 
                 # we also care about the endmotives of the reads, so we store those
                 self.endMotives.count(r)
+
+                if not hasNMisMatches(r, self.MDstrPattern):
+                    nNoMisMatchReads += 1
+                elif self.filterSecondaries and hasSecondaryMatches(r):
+                    nSecondaryHits += 1
+                elif abs(r.template_length) > self.maxFragmentLength:
+                    nFragSize += 1
+                else:
+                    scanList.append(r)
+
+            # if we only want to look at the overlap and want to be strict about it, we stop if
+            # one of the reads got filtered out
+            # we could probably save LOTS of time if we were to only look at one of the two here,
+            # but until i can recalculate the MD tag of a read, i am stuck with checking both
+            if self.onlyOverlap and self.strictOverlap and len(scanList) != 2:
+                continue
+
+            # now we execute the mismatch finding for the reads that we selected (read + mate)
+            for r in scanList:
+
+                # get all mismatches in this read
+                tmpMisMatches = self.scanAlignedSegment(r)
+                # store the mismatches and keep a record how often each was found
+                for mm in tmpMisMatches:
+                    if mm in mutSites:
+                        mutSites[mm] += 1
+                    else:
+                        mutSites[mm] = 1
+                # we also store the amount of mismatches found, so we can calculate
+                # the mismatches per read which should be stable between samples
+                nMisMatches += len(tmpMisMatches)
 
         # at this point, there should be no more reads in our read storage, or we did something
         # wrong (or the bam is truncated in some test case)
