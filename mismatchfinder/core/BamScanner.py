@@ -114,8 +114,10 @@ class BamScanner(Process):
         )
 
         # possibly write the evidence reads to a file as well
-        if not outFileRoot is None and self.writeEvidenceBam:
-            evBamPath = outFileRoot.parent / (outFileRoot.name + "_evidence.bam")
+        if not self.outFileRoot is None and self.writeEvidenceBam:
+            evBamPath = self.outFileRoot.parent / (
+                self.outFileRoot.name + "_evidence.bam"
+            )
             evidenceBam = pysam.AlignmentFile(evBamPath, "wb", template=bamFile)
         else:
             evidenceBam = None
