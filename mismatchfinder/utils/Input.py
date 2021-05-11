@@ -88,6 +88,12 @@ class InputParser(object):
             required=True,
             default=None,
         )
+        parser.add_argument(
+            "--writeEvidenceBam",
+            help="wether to output the reads, which were used to calculate the mismatches as a bam [default: %(default)s]",
+            action="store_true",
+        )
+        parser.set_defaults(writeEvidenceBam=False)
 
         parser.add_argument(
             "-v",
@@ -242,6 +248,7 @@ class InputParser(object):
 
         self.minAverageBaseQuality = params.minAverageBaseQuality
         self.maxMisMatchesPerRead = params.maxMisMatchesPerRead
+        self.writeEvidenceBam = params.writeEvidenceBam
 
         if params.maxFragmentLength == -1:
             self.maxFragmentLength = float("inf")

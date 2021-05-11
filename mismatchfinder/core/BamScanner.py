@@ -40,6 +40,7 @@ class BamScanner(Process):
         outFileRoot=None,
         kmer=4,
         log=None,
+        writeEvidenceBam=False,
     ):
         super(BamScanner, self).__init__()
 
@@ -64,6 +65,7 @@ class BamScanner(Process):
         self.germObj = germObj
 
         self.outFileRoot = outFileRoot
+        self.writeEvidenceBam = writeEvidenceBam
 
         self.endMotives = EndMotives(kmer)
 
@@ -110,6 +112,13 @@ class BamScanner(Process):
         bamFile = pysam.AlignmentFile(
             self.bamFilePath, "r", reference_filename=self.referenceFile
         )
+
+        # possibly write the evidence reads to a file as well
+        if not outFileRoot is None and self.writeEvidenceBam:
+            evBamPath = outFileRoot.parent / (outFileRoot.name + "_evidence.bam")
+            evidenceBam = pysam.AlignmentFile(evBamPath, "wb", template=bamFile)
+        else:
+            evidenceBam = None
 
         # store the reads for which we do not have a partner yet
         readCache = {}
@@ -272,6 +281,7 @@ class BamScanner(Process):
             if self.onlyOverlap and self.strictOverlap and len(scanList) != 2:
                 continue
 
+            writeFrag = False
             # now we execute the mismatch finding for the reads that we selected (read + mate)
             for r in scanList:
 
@@ -285,7 +295,15 @@ class BamScanner(Process):
                         mutSites[mm] = 1
                 # we also store the amount of mismatches found, so we can calculate
                 # the mismatches per read which should be stable between samples
-                nMisMatches += len(tmpMisMatches)
+                nTmpMm = len(tmpMisMatches)
+                nMisMatches += nTmpMm
+                if nTmpMm > 0:
+                    writeFrag = True
+
+            # write the evidence bam to file, if the read contains mismatches
+            if not evidenceBam is None and writeFrag:
+                for r in scanList:
+                    self.evidenceBam.write(r)
 
         # at this point, there should be no more reads in our read storage, or we did something
         # wrong (or the bam is truncated in some test case)
@@ -298,6 +316,11 @@ class BamScanner(Process):
         self.logger.info(
             f"Read through 100.00% of reads in {(datetime.datetime.now()-startTime).total_seconds()/60:.1f} minutes"
         )
+
+        bamFile.close()
+        if not evidenceBam is None:
+            evidenceBam.close()
+
         # TODO remove after profiling
         # prof.stop()
         # print(prof.output_text(unicode=True, color=True))
