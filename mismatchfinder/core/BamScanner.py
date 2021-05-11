@@ -305,7 +305,7 @@ class BamScanner(Process):
             # write the evidence bam to file, if the read contains mismatches
             if not evidenceBam is None and writeFrag:
                 for r in scanList:
-                    self.evidenceBam.write(r)
+                    evidenceBam.write(r)
 
         # at this point, there should be no more reads in our read storage, or we did something
         # wrong (or the bam is truncated in some test case)
