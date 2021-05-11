@@ -634,9 +634,10 @@ def makeConsensusRead(read1, read2, onlyOverlap=False):
 
     # we can just check, if there are overlaps from just the start and end pos, which is significant
     # ly faster than using the md str
+    # we use the equals, because the end is non inclusive
     if (
-        read1.reference_end < read2.reference_start
-        or read1.reference_start > read2.reference_end
+        read1.reference_end <= read2.reference_start
+        or read1.reference_start >= read2.reference_end
     ):
         if onlyOverlap:
             return (None, None)
