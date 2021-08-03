@@ -30,6 +30,7 @@ class BamScanner(Process):
         minBQ,
         minAvgBQ,
         maxMisMatchesPerRead,
+        minMisMatchesPerRead,
         maxFragLength,
         filterSecondaries=True,
         onlyOverlap=True,
@@ -52,6 +53,7 @@ class BamScanner(Process):
         self.minBQ = minBQ
         self.minAvgBQ = minAvgBQ
         self.maxMisMatchesPerRead = maxMisMatchesPerRead
+        self.minMisMatchesPerRead = minMisMatchesPerRead
         self.maxFragmentLength = maxFragLength
         self.filterSecondaries = filterSecondaries
         self.onlyOverlap = onlyOverlap
@@ -75,7 +77,9 @@ class BamScanner(Process):
         # this pattern will match the MDString of reads with at least 1, up to a maximum of
         # maxMisMatchesPerRead mismatches in a read (for both SBS and DBS)
         self.MDstrPattern = re.compile(
-            r"\d+([ACGT](0[ACGT])?\d+){1," + str(maxMisMatchesPerRead) + "}"
+            r"\d+([ACGT](0[ACGT])?\d+){",
+            str(minMisMatchesPerRead),
+            "," + str(maxMisMatchesPerRead) + "}",
         )
 
     # this function gets all sites of mismatches from any mapped read in a bam
