@@ -50,7 +50,7 @@ class InputParser(object):
             "--mappingQuality",
             help="min mapping quality required for a read to be included [default: %(default)s]",
             type=int,
-            default=45,
+            default=37,
         )
         parser.add_argument(
             "--maxMisMatchesPerRead",
