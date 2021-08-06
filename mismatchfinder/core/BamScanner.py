@@ -300,7 +300,7 @@ class BamScanner(Process):
             # now we execute the mismatch finding for the reads that we selected (read + mate)
             # to enable the check for mismatches per fragment, we save the mismatches instead of
             # evaluating right away
-            tmpMisMatches = ()
+            tmpMisMatches = []
             nTmpMisMatches = 0
             for r in scanList:
 
