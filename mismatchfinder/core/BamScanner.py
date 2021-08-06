@@ -31,6 +31,8 @@ class BamScanner(Process):
         minAvgBQ,
         maxMisMatchesPerRead,
         minMisMatchesPerRead,
+        maxMisMatchesPerFragment,
+        minMisMatchesPerFragment,
         maxFragLength,
         filterSecondaries=True,
         onlyOverlap=True,
@@ -52,10 +54,17 @@ class BamScanner(Process):
         self.minMQ = minMQ
         self.minBQ = minBQ
         self.minAvgBQ = minAvgBQ
+
         self.maxMisMatchesPerRead = maxMisMatchesPerRead
         self.minMisMatchesPerRead = minMisMatchesPerRead
+
+        self.maxMisMatchesPerFragment = maxMisMatchesPerFragment
+        self.minMisMatchesPerFragment = minMisMatchesPerFragment
+
         self.maxFragmentLength = maxFragLength
+
         self.filterSecondaries = filterSecondaries
+
         self.onlyOverlap = onlyOverlap
         self.strictOverlap = strictOverlap
 
@@ -288,12 +297,35 @@ class BamScanner(Process):
             if self.onlyOverlap and self.strictOverlap and len(scanList) != 2:
                 continue
 
-            writeFrag = False
             # now we execute the mismatch finding for the reads that we selected (read + mate)
+            # to enable the check for mismatches per fragment, we save the mismatches instead of
+            # evaluating right away
+            tmpMisMatches = ()
+            nTmpMisMatches = 0
             for r in scanList:
 
                 # get all mismatches in this read
-                tmpMisMatches = self.scanAlignedSegment(r)
+                tmm = self.scanAlignedSegment(r)
+
+                # because we only checked with the MD string so far, but didnt really actually check
+                # if we then end up with the right amount of mismatches, we do that here
+                ntmm = len(tmm)
+
+                if (
+                    ntmm >= self.minMisMatchesPerRead
+                    and ntmm < self.maxMisMatchesPerRead
+                ):
+                    tmpMisMatches += tmm
+                    # just saving this should be faster than calculating the length again for the
+                    # joined list (and still correct)
+                    nTmpMisMatches += ntmm
+
+            # then we check if between the two reads (or even just the single if the other one was
+            # discard) we have enough mismatches to keep this in the analysis
+            if (
+                nTmpMisMatches >= self.minMisMatchesPerFragment
+                and nTmpMisMatches <= self.maxMisMatchesPerFragment
+            ):
                 # store the mismatches and keep a record how often each was found
                 for mm in tmpMisMatches:
                     if mm in mutSites:
@@ -302,15 +334,11 @@ class BamScanner(Process):
                         mutSites[mm] = 1
                 # we also store the amount of mismatches found, so we can calculate
                 # the mismatches per read which should be stable between samples
-                nTmpMm = len(tmpMisMatches)
-                nMisMatches += nTmpMm
-                if nTmpMm > 0:
-                    writeFrag = True
 
-            # write the evidence bam to file, if the read contains mismatches
-            if not evidenceBam is None and writeFrag:
-                for r in scanList:
-                    evidenceBam.write(r)
+                # write the evidence bam to file, for the reads we used
+                if not evidenceBam is None:
+                    for r in scanList:
+                        evidenceBam.write(r)
 
         # at this point, there should be no more reads in our read storage, or we did something
         # wrong (or the bam is truncated in some test case)

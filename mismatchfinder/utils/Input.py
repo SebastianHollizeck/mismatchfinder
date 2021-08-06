@@ -65,6 +65,18 @@ class InputParser(object):
             default=1,
         )
         parser.add_argument(
+            "--maxMisMatchesPerFragment",
+            help="maximum mismatches a pair of reads is allowed before it is discarded [default: %(default)s]",
+            type=int,
+            default=7,
+        )
+        parser.add_argument(
+            "--minMisMatchesPerFragment",
+            help="minimum mismatches a pair of read needs before it is analysed [default: %(default)s]",
+            type=int,
+            default=1,
+        )
+        parser.add_argument(
             "--maxFragmentLength",
             help="maximum fragment length for a read to be considered for analysis [default: %(default)s] -1 corresponds to unlimited",
             type=int,
@@ -259,8 +271,13 @@ class InputParser(object):
         self.method = params.method
 
         self.minAverageBaseQuality = params.minAverageBaseQuality
+
         self.maxMisMatchesPerRead = params.maxMisMatchesPerRead
         self.minMisMatchesPerRead = params.minMisMatchesPerRead
+
+        self.maxMisMatchesPerFragment = params.maxMisMatchesPerFragment
+        self.minMisMatchesPerFragment = params.minMisMatchesPerFragment
+
         self.onlyOverlap = params.onlyOverlap
         self.writeEvidenceBam = params.writeEvidenceBam
 
