@@ -44,6 +44,7 @@ class BamScanner(Process):
         kmer=4,
         log=None,
         writeEvidenceBam=False,
+        writeEvidenceReadPairs=False,
     ):
         super(BamScanner, self).__init__()
 
@@ -77,6 +78,7 @@ class BamScanner(Process):
 
         self.outFileRoot = outFileRoot
         self.writeEvidenceBam = writeEvidenceBam
+        self.writeEvidenceReadPairs = writeEvidenceReadPairs
 
         self.endMotives = EndMotives(kmer)
 
@@ -302,6 +304,7 @@ class BamScanner(Process):
             # evaluating right away
             tmpMisMatches = []
             nTmpMisMatches = 0
+            tmpPerReadUsage = []
             for r in scanList:
 
                 # get all mismatches in this read
@@ -319,6 +322,8 @@ class BamScanner(Process):
                     # just saving this should be faster than calculating the length again for the
                     # joined list (and still correct)
                     nTmpMisMatches += ntmm
+                    # store in the per read, so we can write the evidence only for the reads we used
+                    tmpPerReadUsage += True
 
             # then we check if between the two reads (or even just the single if the other one was
             # discard) we have enough mismatches to keep this in the analysis
@@ -337,8 +342,10 @@ class BamScanner(Process):
 
                 # write the evidence bam to file, for the reads we used
                 if not evidenceBam is None:
-                    for r in scanList:
-                        evidenceBam.write(r)
+                    for r, use in scanList, tmpPerReadUsage:
+                        # only write the read if it was used, or if we want the pair info
+                        if use or self.writeEvidenceReadPairs:
+                            evidenceBam.write(r)
 
         # at this point, there should be no more reads in our read storage, or we did something
         # wrong (or the bam is truncated in some test case)
