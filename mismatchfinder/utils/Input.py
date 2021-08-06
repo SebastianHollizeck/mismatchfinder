@@ -118,6 +118,12 @@ class InputParser(object):
             action="store_true",
         )
         parser.set_defaults(writeEvidenceBam=False)
+        parser.add_argument(
+            "--writeEvidenceAsReadPairs",
+            help="wether to output both reads, which were used to calculate the mismatches when writing the evidence bam [default: %(default)s]",
+            action="store_true",
+        )
+        parser.set_defaults(writeEvidenceAsReadPairs=True)
 
         parser.add_argument(
             "-v",
@@ -280,6 +286,7 @@ class InputParser(object):
 
         self.onlyOverlap = params.onlyOverlap
         self.writeEvidenceBam = params.writeEvidenceBam
+        self.writeEvidenceReadPairs = params.writeEvidenceAsReadPairs
 
         if params.maxFragmentLength == -1:
             self.maxFragmentLength = float("inf")

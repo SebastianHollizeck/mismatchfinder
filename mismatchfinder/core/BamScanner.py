@@ -303,33 +303,35 @@ class BamScanner(Process):
             # to enable the check for mismatches per fragment, we save the mismatches instead of
             # evaluating right away
             tmpMisMatches = []
-            nTmpMisMatches = 0
+            nFragMisMatches = 0
             tmpPerReadUsage = []
             for r in scanList:
 
                 # get all mismatches in this read
-                tmm = self.scanAlignedSegment(r)
+                readMisMatches = self.scanAlignedSegment(r)
 
                 # because we only checked with the MD string so far, but didnt really actually check
-                # if we then end up with the right amount of mismatches, we do that here
-                ntmm = len(tmm)
+                # if we then end up with the right amount of mismatches, we do that here.
+                nReadMisMatches = len(readMisMatches)
 
-                if (
-                    ntmm >= self.minMisMatchesPerRead
-                    and ntmm < self.maxMisMatchesPerRead
-                ):
-                    tmpMisMatches += tmm
+                # we really only need to check, if we still have enough, as the MDstr already gave
+                # us the information that it will not be MORE than that. (this is slightly more
+                # efficient and we need every help we can get)
+                if nReadMisMatches >= self.minMisMatchesPerRead:
+                    tmpMisMatches += readMisMatches
                     # just saving this should be faster than calculating the length again for the
                     # joined list (and still correct)
-                    nTmpMisMatches += ntmm
+                    nFragMisMatches += nReadMisMatches
                     # store in the per read, so we can write the evidence only for the reads we used
                     tmpPerReadUsage += True
 
             # then we check if between the two reads (or even just the single if the other one was
             # discard) we have enough mismatches to keep this in the analysis
+            # in contrast to the perRead check, we can definitly have too many here and need to
+            # check both boundaries
             if (
-                nTmpMisMatches >= self.minMisMatchesPerFragment
-                and nTmpMisMatches <= self.maxMisMatchesPerFragment
+                nFragMisMatches >= self.minMisMatchesPerFragment
+                and nFragMisMatches <= self.maxMisMatchesPerFragment
             ):
                 # store the mismatches and keep a record how often each was found
                 for mm in tmpMisMatches:
