@@ -170,7 +170,7 @@ class BamScanner(Process):
 
                     # give some info how far we are already through the bam
                     self.logger.info(
-                        f"Read through {nReads} reads - processing {readsPerSec:6d} reads per second"
+                        f"Read through {nReads} reads - processing {readsPerSec:9d} reads per second"
                     )
                     currTime = now
 
