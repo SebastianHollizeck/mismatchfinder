@@ -34,6 +34,8 @@ class BamScanner(Process):
         maxMisMatchesPerFragment,
         minMisMatchesPerFragment,
         maxFragLength,
+        minReadPos,
+        maxReadPos,
         filterSecondaries=True,
         onlyOverlap=True,
         strictOverlap=True,
@@ -63,6 +65,9 @@ class BamScanner(Process):
         self.minMisMatchesPerFragment = minMisMatchesPerFragment
 
         self.maxFragmentLength = maxFragLength
+
+        self.minReadPos = minReadPos
+        self.maxReadPos = maxReadPos
 
         self.filterSecondaries = filterSecondaries
 
@@ -526,6 +531,16 @@ class BamScanner(Process):
             rpos += 1
             if readPos is None:
                 continue
+
+            # if we are in the beginning of the read, we dont trust it, so we just continue on,
+            # until we have a position we trust.
+            if readPos < self.minReadPos:
+                continue
+
+            # however, if we are at the end of the read, we will never trust again, so we can
+            # actually break out of this loop (every bit of performance helps)
+            if readPos > self.maxReadPos:
+                break
 
             # if it is lower case it symbolises a mismatch
             if seq.islower():

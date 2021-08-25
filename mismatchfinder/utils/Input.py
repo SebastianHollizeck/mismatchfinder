@@ -83,6 +83,19 @@ class InputParser(object):
             default=-1,
         )
         parser.add_argument(
+            "--minReadPos",
+            help="The first position in the read, that should be used for analysis. the default of %(default)s is used, to discard the early error prone positions from illumina reads.",
+            type=int,
+            default=11,
+        )
+        parser.add_argument(
+            "--maxReadPos",
+            help="The last position in the read, that should be used for analysis. the default of %(default)s is used, to discard the late error prone positions from illumina reads. (this is based on 100bp sequencing, but works well on longer paired end reads. for both short as well as single end reads, this value will need to be adjusted.)",
+            type=int,
+            default=89,
+        )
+
+        parser.add_argument(
             "--onlyOverlap",
             help="only consider the overlapping part of the paired end fragment [default: %(default)s]",
             action="store_true",
@@ -283,6 +296,9 @@ class InputParser(object):
 
         self.maxMisMatchesPerFragment = params.maxMisMatchesPerFragment
         self.minMisMatchesPerFragment = params.minMisMatchesPerFragment
+
+        self.maxReadPos = params.maxReadPos
+        self.minReadPos = params.minReadPos
 
         self.onlyOverlap = params.onlyOverlap
         self.writeEvidenceBam = params.writeEvidenceBam
