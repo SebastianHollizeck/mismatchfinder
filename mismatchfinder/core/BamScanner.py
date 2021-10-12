@@ -702,7 +702,7 @@ def hasSecondaryMatches(read):
 
 # calculates the consensus of two reads and can also set the non overlapping part to base quality 0
 # so that it will not be analysed further
-def makeConsensusRead(read1, read2, onlyOverlap=False, strict=FALSE):
+def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
 
     # we can just check, if there are overlaps from just the start and end pos, which is significant
     # ly faster than using the md str
