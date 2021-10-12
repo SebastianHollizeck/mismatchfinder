@@ -702,7 +702,7 @@ def hasSecondaryMatches(read):
 
 # calculates the consensus of two reads and can also set the non overlapping part to base quality 0
 # so that it will not be analysed further
-def makeConsensusRead(read1, read2, onlyOverlap=False):
+def makeConsensusRead(read1, read2, onlyOverlap=False, strict=FALSE):
 
     # we can just check, if there are overlaps from just the start and end pos, which is significant
     # ly faster than using the md str
@@ -744,6 +744,13 @@ def makeConsensusRead(read1, read2, onlyOverlap=False):
         read2IntPos = read2IndDict[pos]
         # we only really care if there is a difference in the sequence
         if read1Seq[read1IntPos] != read2Seq[read2IntPos]:
+
+            # if the strict method is used, overlaps that dont show the same base
+            # are discarded (quality set to 0)
+            if strict:
+                read1Quals[read1IntPos] == 0
+                read2Quals[read2IntPos] == 0
+                continue
 
             # we see which has the higher quality and then take that as the ground truth, but also
             # we try to avoid counting the overlap twice by reducing the quality of the other to 0

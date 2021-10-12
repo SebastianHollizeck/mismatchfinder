@@ -88,6 +88,12 @@ class InputParser(object):
             action="store_true",
         )
         parser.set_defaults(onlyOverlap=False)
+        parser.add_argument(
+            "--strictOverlap",
+            help="when enabled and the reads do not agree in the overlap, the mismatch will be discarded [default: %(default)s]",
+            action="store_true",
+        )
+        parser.set_defaults(strictOverlap=False)
 
         parser.add_argument(
             "-t",
