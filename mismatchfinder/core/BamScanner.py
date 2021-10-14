@@ -324,6 +324,8 @@ class BamScanner(Process):
                     nFragMisMatches += nReadMisMatches
                     # store in the per read, so we can write the evidence only for the reads we used
                     tmpPerReadUsage += [True]
+                else:
+                    tmpPerReadUsage += [False]
 
             # then we check if between the two reads (or even just the single if the other one was
             # discard) we have enough mismatches to keep this in the analysis
