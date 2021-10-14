@@ -346,8 +346,7 @@ class BamScanner(Process):
 
                 # write the evidence bam to file, for the reads we used
                 if not evidenceBam is None:
-                    for r, use in scanList, tmpPerReadUsage:
-                        print(r, use)
+                    for r, use in zip(scanList, tmpPerReadUsage):
                         # only write the read if it was used, or if we want the pair info
                         if use or self.writeEvidenceReadPairs:
                             evidenceBam.write(r)
