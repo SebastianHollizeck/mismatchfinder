@@ -323,9 +323,9 @@ class BamScanner(Process):
                     # joined list (and still correct)
                     nFragMisMatches += nReadMisMatches
                     # store in the per read, so we can write the evidence only for the reads we used
-                    tmpPerReadUsage += [True]
+                    tmpPerReadUsage.append(True)
                 else:
-                    tmpPerReadUsage += [False]
+                    tmpPerReadUsage.append(False)
 
             # then we check if between the two reads (or even just the single if the other one was
             # discard) we have enough mismatches to keep this in the analysis
@@ -346,6 +346,7 @@ class BamScanner(Process):
 
                 # write the evidence bam to file, for the reads we used
                 if not evidenceBam is None:
+                    print(scanList)
                     for r, use in scanList, tmpPerReadUsage:
                         # only write the read if it was used, or if we want the pair info
                         if use or self.writeEvidenceReadPairs:
