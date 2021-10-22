@@ -35,8 +35,8 @@ class BamScanner(Process):
         minMisMatchesPerFragment,
         maxFragLength,
         filterSecondaries=True,
-        onlyOverlap=True,
-        strictOverlap=True,
+        onlyOverlap=False,
+        strictOverlap=False,
         blackList=None,
         whiteList=None,
         germObj=None,
@@ -227,7 +227,10 @@ class BamScanner(Process):
                         # does not change anyhing and we can save computational time
                         if not mate is None and (readWhiteListed and mateWhiteListed):
                             read1, read2 = makeConsensusRead(
-                                read, mate, onlyOverlap=self.onlyOverlap
+                                read,
+                                mate,
+                                onlyOverlap=self.onlyOverlap,
+                                strict=self.strictOverlap,
                             )
                             # if there was no overlap, but onlyOverlap was true, the reads will
                             # both be None, so we can skip them
@@ -735,6 +738,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
     else:
         # if there is no intersection, we just return the reads unchanged (this shouldnt happen,
         # because we checked the template length before, but sure)
+        if onlyOverlap:
+            return (None, None)
         return (read1, read2)
 
     # go through all of the overlaps and decide which of the reads is better

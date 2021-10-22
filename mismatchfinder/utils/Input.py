@@ -291,6 +291,8 @@ class InputParser(object):
         self.minMisMatchesPerFragment = params.minMisMatchesPerFragment
 
         self.onlyOverlap = params.onlyOverlap
+        self.strictOverlap = params.strictOverlap
+
         self.writeEvidenceBam = params.writeEvidenceBam
         self.writeEvidenceReadPairs = params.writeEvidenceAsReadPairs
 
