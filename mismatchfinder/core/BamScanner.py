@@ -117,6 +117,7 @@ class BamScanner(Process):
         nAlignedReads = 0
         nSecondaryHits = 0
         nFragSize = 0
+        nAnalysedBases = 0
 
         # store the fragment lengths for later
         fragLengths = []
@@ -226,7 +227,7 @@ class BamScanner(Process):
                         # of interest and if the consensus part isnt in the region of interest it
                         # does not change anyhing and we can save computational time
                         if not mate is None and (readWhiteListed and mateWhiteListed):
-                            read1, read2 = makeConsensusRead(
+                            read1, read2, interLen = makeConsensusRead(
                                 read,
                                 mate,
                                 onlyOverlap=self.onlyOverlap,
@@ -238,6 +239,8 @@ class BamScanner(Process):
                                 reads = []
                             else:
                                 reads = [read1, read2]
+                                # we store how big the region of analysis was (this is only relevant if we have onlyOverlap enabled)
+                                nAnalysedBases += interLen
                         else:
 
                             # at this point only one of the two reads can be in the region of
@@ -344,8 +347,9 @@ class BamScanner(Process):
                         mutSites[mm] += 1
                     else:
                         mutSites[mm] = 1
-                # we also store the amount of mismatches found, so we can calculate
-                # the mismatches per read which should be stable between samples
+                    # we also store the amount of mismatches found, so we can calculate
+                    # the mismatches per read which should be stable between samples
+                    nMisMatches += 1
 
                 # write the evidence bam to file, for the reads we used
                 if not evidenceBam is None:
@@ -434,7 +438,7 @@ class BamScanner(Process):
             fragmentSizeQuantiles=fragLenQuantiles,
             nDiscordantReads=nDiscordantReads,
             nMisMatches=nMisMatches,
-            nAlignedBases=nAlignedBases,
+            nAnalysedBases=nAnalysedBases,
             bam=self.bamFilePath.name,
         )
 
@@ -723,8 +727,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
         or read1.reference_start >= read2.reference_end
     ):
         if onlyOverlap:
-            return (None, None)
-        return (read1, read2)
+            return (None, None, None)
+        return (read1, read2, abs(read1.template_length))
 
     # get the reference positions to see if read1 and 2 are aligned to the same area
     read1RefPos = read1.get_reference_positions(full_length=True)
@@ -745,8 +749,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
         # if there is no intersection, we just return the reads unchanged (this shouldnt happen,
         # because we checked the template length before, but sure)
         if onlyOverlap:
-            return (None, None)
-        return (read1, read2)
+            return (None, None, none)
+        return (read1, read2, abs(read1.template_length))
 
     # go through all of the overlaps and decide which of the reads is better
     for pos in inter:
@@ -834,6 +838,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
                 )
                 read1Quals[read1IntPos] = 0
 
+    # if we only made a consensus, we report the normal length
+    fLen = abs(read1.template_length)
     if onlyOverlap:
         # here we set every position that was not in the intersection to BQ 0
         for k, intPos in enumerate(read1RefPos):
@@ -842,6 +848,8 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
         for k, intPos in enumerate(read2RefPos):
             if not intPos in inter:
                 read2Quals[k] = 0
+        # we only report the length of the intersection
+        fLen = len(inter)
 
     # finally we have to create new reads
     read1New = read1
@@ -852,4 +860,4 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
     read2New.query_sequence = "".join(read2Seq)
     read2New.query_qualities = read2Quals
 
-    return (read1New, read2New)
+    return (read1New, read2New, fLen)

@@ -36,7 +36,7 @@ class MismatchCandidates(object):
         nNoMisMatchReads,
         nBlackListedReads,
         nLowQualReads,
-        nAlignedReads,
+        nAnalysedBases,
         fragmentSizeQuantiles,
         nMisMatches,
         nDiscordantReads,
@@ -56,7 +56,7 @@ class MismatchCandidates(object):
         self.nMisMatches = nMisMatches
         self.nSites = len(self.mutSites)
         self.nDiscordantReads = nDiscordantReads
-        self.nAlignedBases = nAlignedBases
+        self.nAnalysedBases = nAnalysedBases
 
     def convertToPandasDataFrameRow(self):
         fields = deepcopy(self.__dict__)
