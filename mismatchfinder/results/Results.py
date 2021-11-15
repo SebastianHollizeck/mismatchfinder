@@ -41,7 +41,6 @@ class MismatchCandidates(object):
         fragmentSizeQuantiles,
         nMisMatches,
         nDiscordantReads,
-        nAlignedBases,
         bam,
     ):
 
