@@ -293,6 +293,12 @@ class InputParser(object):
         self.onlyOverlap = params.onlyOverlap
         self.strictOverlap = params.strictOverlap
 
+        # if both strict overlap and only overlap are active, we actually double the
+        # base quality, which we require, as the base quality of two agreeing reads
+        # gets added up
+        # TODO: think if we should add this in here, or if we should just leave it
+        # to the user to specify a higher base quality
+
         self.writeEvidenceBam = params.writeEvidenceBam
         self.writeEvidenceReadPairs = params.writeEvidenceAsReadPairs
 
