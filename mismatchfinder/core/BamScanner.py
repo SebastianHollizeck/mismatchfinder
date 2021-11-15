@@ -417,6 +417,12 @@ class BamScanner(Process):
         for i in range(0, len(quantileRange)):
             fragLenQuantiles[quantileRange[i]] = fragLenQuantilesAr[i]
 
+        # if we have only overLap, we need to only look at the intersection rather than all of
+        # the aligned bases, but we stored that already in the variant, so we overwrite it if
+        # its not overlap only
+        if not self.onlyOverlap:
+            nAnalysedBases = nAlignedBases
+
         # return a dict of the counts we made
         return MismatchCandidates(
             mutSites=mutSites,
