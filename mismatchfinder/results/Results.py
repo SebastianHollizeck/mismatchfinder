@@ -36,6 +36,7 @@ class MismatchCandidates(object):
         nNoMisMatchReads,
         nBlackListedReads,
         nLowQualReads,
+        nAlignedReads,
         nAnalysedBases,
         fragmentSizeQuantiles,
         nMisMatches,
