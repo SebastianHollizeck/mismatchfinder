@@ -391,28 +391,29 @@ class BamScanner(Process):
         # expected )
         fragLengths = array(sort(fragLengths))
 
+        lenFragLengths = len(fragLengths)
         # we get the middle of the array, which should be the median of the distribution
-        median = fragLengths[int(len(fragLengths) / 2)]
+        median = fragLengths[int(lenFragLengths / 2)]
 
         # find the index, at which the read distance gets to normal amounts
-        lowSizeIdx = -1
-        for i in range(0, len(fragLengths)):
+        lowSizeIdx = 0
+        for i in range(0, lenFragLengths):
             if fragLengths[i] < 35:
                 lowSizeIdx = i
             else:
                 break
 
         # find the index, at which the read distance gets to normal amounts
-        highSizeIdx = -1
-        for i in range((len(fragLengths) - 1), 0, -1):
+        highSizeIdx = lenFragLengths
+        for i in range((lenFragLengths - 1), 0, -1):
             if fragLengths[i] > 1500:
                 highSizeIdx = i
             else:
                 break
 
-        # amount of discordant reads is the amount of lower than 35 plus the amount of reads longer than
-        # 1500 bases
-        nDiscordantReads = lowSizeIdx + (nAlignedReads - highSizeIdx)
+        # amount of discordant reads is the amount of lower than 35 plus the amount of reads longer
+        # than 1500 bases
+        nDiscordantFragments = lowSizeIdx + (lenFragLengths - highSizeIdx)
 
         # get the fragment length distribution
         quantileRange = [0.01, 0.05, 0.15, 0.25, 0.5, 0.75, 0.85, 0.95, 0.99]
@@ -436,7 +437,7 @@ class BamScanner(Process):
             nBlackListedReads=nBlackListedReads,
             nAlignedReads=nAlignedReads,
             fragmentSizeQuantiles=fragLenQuantiles,
-            nDiscordantReads=nDiscordantReads,
+            nDiscordantFragments=nDiscordantFragments,
             nMisMatches=nMisMatches,
             nAnalysedBases=nAnalysedBases,
             bam=self.bamFilePath.name,

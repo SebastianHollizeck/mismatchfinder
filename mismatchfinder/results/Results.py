@@ -40,7 +40,7 @@ class MismatchCandidates(object):
         nAnalysedBases,
         fragmentSizeQuantiles,
         nMisMatches,
-        nDiscordantReads,
+        nDiscordantFragments,
         bam,
     ):
 
@@ -55,7 +55,7 @@ class MismatchCandidates(object):
         self.fragmentSizeQuantiles = fragmentSizeQuantiles
         self.nMisMatches = nMisMatches
         self.nSites = len(self.mutSites)
-        self.nDiscordantReads = nDiscordantReads
+        self.nDiscordantFragments = nDiscordantFragments
         self.nAnalysedBases = nAnalysedBases
 
     def convertToPandasDataFrameRow(self):
