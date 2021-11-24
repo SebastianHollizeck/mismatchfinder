@@ -40,6 +40,8 @@ class BamScanner(Process):
         blackList=None,
         whiteList=None,
         germObj=None,
+        afCutOff=0,
+        germlineRequirePass=False,
         outFileRoot=None,
         kmer=4,
         log=None,
@@ -75,6 +77,8 @@ class BamScanner(Process):
         self.blackList = blackList
         self.whiteList = whiteList
         self.germObj = germObj
+        self.afCutOff = afCutOff
+        self.germlineRequirePass = germlineRequirePass
 
         self.outFileRoot = outFileRoot
         self.writeEvidenceBam = writeEvidenceBam
@@ -472,7 +476,12 @@ class BamScanner(Process):
         mutCands = self.getMutationSites()
 
         # filter out germline mismatches
-        mutCands.checkGermlineStatus(self.germObj)
+        mutCands.checkGermlineStatus(
+            self.germObj,
+            afCutOff=self.afCutOff,
+            discard=True,
+            requirePass=self.germlineRequirePass,
+        )
 
         # count each context (strand agnosticly, so if the rreverse complement is already found we
         # instead count the reverse complement)

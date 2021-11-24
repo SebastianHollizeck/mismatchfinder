@@ -163,7 +163,14 @@ class MismatchCandidates(object):
         self.DBScontexts = convertToDBSTable(resDBS)
         debug("Done counting contexts")
 
-    def checkGermlineStatus(self, germlineObj, discard=False, confidenceThreshold=2):
+    def checkGermlineStatus(
+        self,
+        germlineObj,
+        discard=False,
+        confidenceThreshold=2,
+        afCutOff=0,
+        requirePass=True,
+    ):
 
         if not germlineObj is None:
             info(f"Checking germline status for {len(self.mutSites)} sites")
@@ -220,14 +227,22 @@ class MismatchCandidates(object):
                     continue
 
                 # we can have several alts, so we check all of them
-                for alt in cache.alts[idx]:
+                for alt, filter, af in zip(
+                    cache.alts[idx], cache.filters[idx], cache.afs[idx]
+                ):
                     # again if this is not of length 1 we have an indel and we do not really
                     # want to deal with it
                     if len(alt) != 1:
                         continue
-                    # now here we need to check if the alt matches the alt that we found in the
-                    # reads
-                    if altContext[offset].upper() == alt:
+                    # now here we need to check if:
+                    #  * the alt matches the alt that we found in the reads
+                    #  * the filter is either a pass (True) or we dont care about the filter
+                    #  * the germline allele frequency is bigger than the cutoff set
+                    if (
+                        altContext[offset].upper() == alt
+                        and (not requirePass or filter)
+                        and af >= afCutOff
+                    ):
                         # this means this is a germline variant and we just make it an upper case
                         # to keep the variant but show its not somatic
                         refContext = (
@@ -250,6 +265,7 @@ class MismatchCandidates(object):
             # at least at the moment
             self.nSomaticMisMatches += misMatchClass * occurrences
             self.nSomaticMisMatchSites += 1
+            # storing how many "confident" mismatch sites we found
             if occurrences >= confidenceThreshold:
                 self.nConfidentSomaticMisMatchSites += 1
 

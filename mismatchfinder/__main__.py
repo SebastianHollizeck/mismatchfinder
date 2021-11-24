@@ -83,6 +83,8 @@ def main():
             lock=fhLock,
             results=tumourResults,
             germObj=germline,
+            germlineRequirePass=inputs.germlineRequirePass,
+            afCutOff=inputs.afCutOff,
             outFileRoot=inputs.outFileRoot,
             log=logger,
         )
@@ -92,37 +94,39 @@ def main():
         p.start()
         processes.append(p)
 
-    # spawn processes to analyse each bam individually
-    for bam in inputs.normals:
-        p = BamScanner(
-            bamFilePath=bam,
-            referenceFile=inputs.referenceFile,
-            minBQ=inputs.minBQ,
-            minMQ=inputs.minMQ,
-            minAvgBQ=inputs.minAverageBaseQuality,
-            maxMisMatchesPerRead=inputs.maxMisMatchesPerRead,
-            minMisMatchesPerRead=inputs.minMisMatchesPerRead,
-            maxMisMatchesPerFragment=inputs.maxMisMatchesPerFragment,
-            minMisMatchesPerFragment=inputs.minMisMatchesPerFragment,
-            maxFragLength=inputs.maxFragmentLength,
-            onlyOverlap=inputs.onlyOverlap,
-            strictOverlap=inputs.strictOverlap,
-            writeEvidenceBam=inputs.writeEvidenceBam,
-            writeEvidenceReadPairs=inputs.writeEvidenceReadPairs,
-            blackList=blackList,
-            whiteList=whiteList,
-            semaphore=semaphore,
-            lock=fhLock,
-            results=normalResults,
-            germObj=germline,
-            outFileRoot=inputs.outFileRoot,
-            log=logger,
-        )
-        # we request the resources here, but return them inside the thread, once it is done
-        semaphore.acquire()
-        # then we start the process
-        p.start()
-        processes.append(p)
+    # # spawn processes to analyse each bam individually
+    # for bam in inputs.normals:
+    #     p = BamScanner(
+    #         bamFilePath=bam,
+    #         referenceFile=inputs.referenceFile,
+    #         minBQ=inputs.minBQ,
+    #         minMQ=inputs.minMQ,
+    #         minAvgBQ=inputs.minAverageBaseQuality,
+    #         maxMisMatchesPerRead=inputs.maxMisMatchesPerRead,
+    #         minMisMatchesPerRead=inputs.minMisMatchesPerRead,
+    #         maxMisMatchesPerFragment=inputs.maxMisMatchesPerFragment,
+    #         minMisMatchesPerFragment=inputs.minMisMatchesPerFragment,
+    #         maxFragLength=inputs.maxFragmentLength,
+    #         onlyOverlap=inputs.onlyOverlap,
+    #         strictOverlap=inputs.strictOverlap,
+    #         writeEvidenceBam=inputs.writeEvidenceBam,
+    #         writeEvidenceReadPairs=inputs.writeEvidenceReadPairs,
+    #         blackList=blackList,
+    #         whiteList=whiteList,
+    #         semaphore=semaphore,
+    #         lock=fhLock,
+    #         results=normalResults,
+    #         germObj=germline,
+    #         germlineRequirePass=inputs.germlineRequirePass,
+    #         afCutOff=inputs.afCutOff,
+    #         outFileRoot=inputs.outFileRoot,
+    #         log=logger,
+    #     )
+    #     # we request the resources here, but return them inside the thread, once it is done
+    #     semaphore.acquire()
+    #     # then we start the process
+    #     p.start()
+    #     processes.append(p)
 
     # TODO: check if we need to consume the queue here already to reduce the memory footprint, or
     # if the memory requirement is actually from the zarr storage being cached so often

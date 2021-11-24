@@ -54,12 +54,18 @@ class GermlineObject(object):
         return buildNCLSindex(self.__zarrObj[f"{chr}/variants/POS"][...])
 
     def loadChromsomeAlts(self, chr):
-        # this loads the zarr object into memory, which is possible because we only load
-        # a small part of the whole thing
+        # this loads the zarr object into memory, which is possible because we only
+        # load a small part of the whole thing
         return self.__zarrObj[f"{chr}/variants/ALT"][...]
 
     def loadChromsomeRefs(self, chr):
         return self.__zarrObj[f"{chr}/variants/REF"][...]
+
+    def loadChromsomeAFs(self, chr):
+        return self.__zarrObj[f"{chr}/variants/AF"][...]
+
+    def loadChromosomeFilter(self, chr):
+        return self.__zarrObj[f"{chr}/variants/FILTER_PASS"][...]
 
     # TODO: test if we could store the cache object in the germline object for each chromosome
     # that way we would only need to cache once? at least theoretically, if the object is stored
@@ -77,6 +83,8 @@ class ChromosomeCache(object):
             self.index = germlineObj.loadChromosomeIndex(chr)
             self.refs = germlineObj.loadChromsomeRefs(chr)
             self.alts = germlineObj.loadChromsomeAlts(chr)
+            self.afs = germlineObj.loadChromsomeAFs(chr)
+            self.filters = germlineObj.loadChromosomeFilter(chr)
 
         except KeyError:
             # if this fails it means we couldnt load the index, because it doesnt exist in the cache

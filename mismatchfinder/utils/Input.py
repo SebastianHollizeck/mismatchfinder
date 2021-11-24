@@ -1,9 +1,21 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from logging import basicConfig, debug, error, info, getLogger, root
 from pathlib import Path
 from sys import exit
 
 from pysam import AlignmentFile
+
+# stole this from stackoverflow
+# (https://stackoverflow.com/questions/12116685/how-can-i-require-my-python-scripts-argument-to-be-a-float-between-0-0-1-0-usin)
+def restricted_float(x):
+    try:
+        x = float(x)
+    except ValueError:
+        raise ArgumentTypeError("%r not a floating-point literal" % (x,))
+
+    if x < 0.0 or x > 1.0:
+        raise ArgumentTypeError("%r not in range [0.0, 1.0]" % (x,))
+    return x
 
 
 class InputParser(object):
@@ -146,6 +158,22 @@ class InputParser(object):
             choices=["QP", "ILM"],
             default="ILM",
         )
+
+        parser.add_argument(
+            "--germlineAFCutOff",
+            help="minimum allele frequency for a variant in the germline resource to be used to filter [default: %(default)s]",
+            type=restricted_float,
+            default=0,
+        )
+
+        parser.add_argument(
+            "--germlineRequirePass",
+            help="Flag wheter the germline variant needs to be a PASS filter value to be used for filtering",
+            action="store_true",
+        )
+        # we set this to false, because an issue in the germline calling can hint at a problem we
+        # might have with the detection as well
+        parser.set_defaults(germlineRequirePass=False)
 
         # parser.add_argument(
         #     "-n",
@@ -306,3 +334,6 @@ class InputParser(object):
             self.maxFragmentLength = float("inf")
         else:
             self.maxFragmentLength = params.maxFragmentLength
+
+        self.afCutOff = params.germlineAFCutOff
+        self.germlineRequirePass = params.germlineRequirePass
