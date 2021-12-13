@@ -226,10 +226,9 @@ class MismatchCandidates(object):
                 if len(ref) != 1:
                     continue
 
-                # we can have several alts, so we check all of them
-                for alt, filter, af in zip(
-                    cache.alts[idx], cache.filters[idx], cache.afs[idx]
-                ):
+                # we can have several alts, so we check all of them, but the filter is the same for all
+                filter = cache.filters[idx]
+                for alt, af in zip(cache.alts[idx], cache.afs[idx]):
                     # again if this is not of length 1 we have an indel and we do not really
                     # want to deal with it
                     if len(alt) != 1:
