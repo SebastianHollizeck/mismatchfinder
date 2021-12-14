@@ -53,6 +53,20 @@ class BedObject(object):
                     currChr = lineArray[0]
                     starts = [lineArray[1]]
                     ends = [lineArray[2]]
+            # finally, when we are done with everything, and the currentChr is not None, we need to
+            # add the things one last time (just like in the else statement)
+            if not currChr is None:
+                # convert to array with dtype (ncls needs that)
+                starts = array(starts, dtype=int64)
+                ends = array(ends, dtype=int64)
+                # add one to the end, to have inclusive ends
+                ends = ends + 1
+
+                # create the data structure (third column is ids... which could be anything, but
+                # needs to be a number )
+                tmpNcls = NCLS(starts, ends, starts)
+                # store the data structure under its chromosome name
+                self.__ncls[currChr] = tmpNcls
 
     @classmethod
     def parseFile(cls, file):
