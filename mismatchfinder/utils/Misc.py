@@ -183,13 +183,15 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
                 }
             )
         else:
-            wlObj = read_bed(whiteListBed)
+            # we cast this to string, because pyranges wants string and we use the Path type
+            wlObj = read_bed(str(whiteListBed))
             wlObj = wlObj.merge()
 
         # if we have a blacklist, we subtract that from the whitelist, otherwise we leave it how
         # it is
         if not blackListBed is None:
-            blObj = read_bed(blackListBed)
+            # we cast this to string, because pyranges wants string and we use the Path type
+            blObj = read_bed(str(blackListBed))
             blObj = blObj.merge()
             wlObj = wlObj.subtract(blObj)
             # shouldnt need to merge again here, as we only have less ranges than before
