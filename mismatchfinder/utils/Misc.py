@@ -202,7 +202,7 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
         for chr, df in wlObj:
             for region in df.iterrows():
                 seq = fastaFile.fetch(
-                    reference=chr, start=region["Start"], end=region["End"]
+                    reference=chr, start=int(region["Start"]), end=int(region["End"])
                 )
 
                 for i in range(len(seq) - 2):
