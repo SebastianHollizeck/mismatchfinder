@@ -201,6 +201,7 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
         # i terate over all chromosomes and each of the ranges
         for chr, df in wlObj:
             for region in df.iterrows():
+                print(f"{chr}:{region['Start']}-{region['End']}")
                 seq = fastaFile.fetch(
                     reference=chr, start=int(region["Start"]), end=int(region["End"])
                 )
