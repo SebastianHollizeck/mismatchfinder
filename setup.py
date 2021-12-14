@@ -29,6 +29,7 @@ setuptools.setup(
         "pandas",
         "quadprog",
         "scipy",
+        "pyranges",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

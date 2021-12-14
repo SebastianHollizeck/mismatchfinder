@@ -134,8 +134,9 @@ def main():
     if inputs.normaliseCounts:
         diNucCounts, triNucCounts = countContexts(
             fastaFilePath=inputs.referenceFile,
-            whiteListBed=inputs.whiteListFile,
-            blackListBed=inputs.blackListFile,
+            # because we have a path type, we need to convert to string
+            whiteListBed=str(inputs.whiteListFile),
+            blackListBed=str(inputs.blackListFile),
         )
     else:
         # have them empty, so we dont normalise
