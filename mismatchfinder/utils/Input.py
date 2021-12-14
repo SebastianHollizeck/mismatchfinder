@@ -175,6 +175,15 @@ class InputParser(object):
         # might have with the detection as well
         parser.set_defaults(germlineRequirePass=False)
 
+        parser.add_argument(
+            "--normaliseCounts",
+            help="Flag to enable normalisation based on the occurrences of the (di/tri)-nucleotides",
+            action="store_true",
+        )
+        # we set this to false, because an issue in the germline calling can hint at a problem we
+        # might have with the detection as well
+        parser.set_defaults(normaliseCounts=False)
+
         # parser.add_argument(
         #     "-n",
         #     "--normals",
@@ -337,3 +346,5 @@ class InputParser(object):
 
         self.afCutOff = params.germlineAFCutOff
         self.germlineRequirePass = params.germlineRequirePass
+
+        self.normaliseCounts = params.normaliseCounts

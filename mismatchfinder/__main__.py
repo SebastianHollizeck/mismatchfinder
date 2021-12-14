@@ -21,6 +21,7 @@ from .core.GermlineObject import GermlineObject
 from .core.Signatures import Signature
 from .utils.Input import InputParser
 from .utils.Output import createOutputFiles
+from .utils.Misc import countContexts
 
 
 # This will run everything.
@@ -128,8 +129,15 @@ def main():
     #     p.start()
     #     processes.append(p)
 
-    # TODO: check if we need to consume the queue here already to reduce the memory footprint, or
-    # if the memory requirement is actually from the zarr storage being cached so often
+    # in the meantime, we will calculate normalisations for the specified regions
+    # @TODO: convert the blacklist to a whitelist bed or make blacklist work with it
+    if inputs.normaliseCounts:
+        diNucCounts, triNucCounts = countContexts(
+            fastaFilePath=inputs.referenceFile, bedFile=inputs.whiteList
+        )
+    else:
+        # have them empty, so we dont normalise
+        diNucCounts = triNucCounts = None
 
     logger.debug("Waiting for all parallel processes to finish")
     # wait for all processes to finish before we continue
@@ -148,7 +156,9 @@ def main():
     # read the files of the parallel processed back in and analyse the results
     SBSsig = Signature.loadSignaturesFromFile(type="SBS")
     SBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_SBScontexts.tsv")
-    SBSweights = SBSsig.analyseCountsFile(SBSFile, method=inputs.method)
+    SBSweights = SBSsig.analyseCountsFile(
+        SBSFile, method=inputs.method, oligoCounts=triNucCounts
+    )
     SBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_SBSweights.tsv"
     )
@@ -157,7 +167,9 @@ def main():
 
     DBSsig = Signature.loadSignaturesFromFile(type="DBS")
     DBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_DBScontexts.tsv")
-    DBSweights = DBSsig.analyseCountsFile(DBSFile, method=inputs.method)
+    DBSweights = DBSsig.analyseCountsFile(
+        DBSFile, method=inputs.method, oligoCounts=triNucCounts
+    )
     DBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_DBSweights.tsv"
     )

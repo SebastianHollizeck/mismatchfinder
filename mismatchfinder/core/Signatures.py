@@ -25,6 +25,7 @@ from quadprog import solve_qp
 from scipy.optimize import minimize_scalar
 
 from mismatchfinder import ext
+from mismatchfinder.utils.Misc import normaliseCounts
 
 try:
     import importlib.resources as pkg_resources
@@ -121,7 +122,7 @@ class Signature(object):
             # and here we just discard them
             return Signature(prelimSigs, type)
 
-    def analyseCountsFile(self, file, method="ILM"):
+    def analyseCountsFile(self, file, method="ILM", oligoCounts=None):
 
         debug(f"Reading in context counts file {file}")
         with open(file, mode="r") as countFH:
@@ -137,6 +138,12 @@ class Signature(object):
             # elif (countsTable.values == 0).all:
             #     error(f"File {file} did not contain any non zero counts")
             #     return DataFrame()
+
+            if not oligoCounts is None:
+                # normalise the counts, by dividing each count by the occurance in the counts
+                countsTable = normaliseCounts(
+                    countsDf=countsTable, contextCountDf=oligoCounts
+                )
 
         if method == "QP":
             sigWeights = self.whichSignaturesQP(countsTable.values)

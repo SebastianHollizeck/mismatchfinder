@@ -1,8 +1,10 @@
 from itertools import product
 from logging import debug
+from collections import defaultdict
 
 from ncls import NCLS
-from numpy import arange, array, int64
+from numpy import arange, array, int64, sum, empty
+from pysam import FastaFile
 
 
 # this function counts how many lower case chars are in a string
@@ -159,3 +161,54 @@ def convertToDBSTable(countDict):
     debug(f"Finished with DBS")
     res = array(res)
     return res
+
+
+def countContexts(fastaFilePath, bedFile):
+    debug(f"Starting to count contexts of nucleotides in {fastaFilePath}")
+
+    triNucCounts = defaultdict(int)
+    diNucCounts = defaultdict(int)
+    # open the fastaFile
+    with FastaFile(fastaFilePath) as fastaFile:
+
+        # get the bedFile
+        with open(bedFile) as f:
+            for line in f:
+                # break the line into fields
+                lineArray = line.strip().split()
+                chr = lineArray[0]
+                start = int(lineArray[1])
+                end = int(lineArray[2])
+
+                seq = fastaFile.fetch(reference=chr, start=start, end=end)
+
+                for i in range(len(seq) - 2):
+                    diNucCounts[seq[i : i + 2]] += 1
+                    triNucCounts[seq[i : i + 3]] += 1
+
+    return (diNucCounts, triNucCounts)
+
+
+def normaliseCounts(countsDf, contextCountDf):
+    debug("Normalising counts with reference context frequency")
+    # go over all columns and get the corresponding counts from the contexts, then make a vector from those counts in the same order
+    countsLength = len(countsDf.columns)
+    # create an empty array
+    weights = empty(countsLength)
+    for i in range(countsLength):
+        # get the mutation type
+        col = countsDf.columns[i]
+        # snip the mutation off
+        refContext = col[:3]
+        # we also need the reverse complement of the context as we collapse the counts
+        refContextRevComp = reverseComplement(refContext)
+
+        weights[i] = contextCountDf[refContext] + contextCountDf[refContextRevComp]
+        debug(f"{i}: {refContext}/{refContextRevComp} -> {weights[i]}")
+
+    # we create the weights, but multiply them, so that we dont come into double precision range
+    weights = divide(weights, (sum(weights) / 100))
+    debug(f"Final weights: {weights}")
+
+    # finally the normalisation (which is pretty easy)
+    return divide(countsDf, weights)
