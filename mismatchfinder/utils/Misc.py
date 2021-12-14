@@ -209,6 +209,7 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
                 for i in range(len(seq) - 2):
                     diNucCounts[seq[i : i + 2]] += 1
                     triNucCounts[seq[i : i + 3]] += 1
+            debug(f"contect frequency analysis complete for chromsome {chr}")
 
     return (diNucCounts, triNucCounts)
 
