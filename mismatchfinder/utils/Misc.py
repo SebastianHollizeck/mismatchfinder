@@ -200,10 +200,10 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
         # dependency (pyfaidx) and is slower (from my preliminary testing)
         # i terate over all chromosomes and each of the ranges
         for chr, df in wlObj:
-            for region in df.iterrows():
-                print(f"{chr}:{region['Start']}-{region['End']}")
+            # iterrows has to return the index, even though we dont use it
+            for idx, region in df.iterrows():
                 seq = fastaFile.fetch(
-                    reference=chr, start=int(region["Start"]), end=int(region["End"])
+                    reference=chr, start=region["Start"], end=region["End"]
                 )
 
                 for i in range(len(seq) - 2):
