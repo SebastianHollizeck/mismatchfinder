@@ -3,8 +3,9 @@ from logging import debug
 from collections import defaultdict
 
 from ncls import NCLS
-from numpy import arange, array, int64, sum, empty
+from numpy import arange, array, int64, sum, empty, divide
 from pysam import FastaFile
+from pyranges import read_bed, from_dict
 
 
 # this function counts how many lower case chars are in a string
@@ -163,7 +164,7 @@ def convertToDBSTable(countDict):
     return res
 
 
-def countContexts(fastaFilePath, bedFile):
+def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
     debug(f"Starting to count contexts of nucleotides in {fastaFilePath}")
 
     triNucCounts = defaultdict(int)
@@ -171,16 +172,36 @@ def countContexts(fastaFilePath, bedFile):
     # open the fastaFile
     with FastaFile(fastaFilePath) as fastaFile:
 
-        # get the bedFile
-        with open(bedFile) as f:
-            for line in f:
-                # break the line into fields
-                lineArray = line.strip().split()
-                chr = lineArray[0]
-                start = int(lineArray[1])
-                end = int(lineArray[2])
+        # if we do not have a whitelist to start out, we make one from the fasta, which includes
+        # everything
+        if whiteListBed is None:
+            wlObj = from_dict(
+                {
+                    "Chromosome": fastaFile.references,
+                    "Start": [1] * fastaFile.nreferences,
+                    "End": fastaFile.lengths,
+                }
+            )
+        else:
+            wlObj = read_bed(whiteListBed)
+            wlObj = wlObj.merge()
 
-                seq = fastaFile.fetch(reference=chr, start=start, end=end)
+        # if we have a blacklist, we subtract that from the whitelist, otherwise we leave it how
+        # it is
+        if not blackListBed is None:
+            blObj = read_bed(blackListBed)
+            blObj = blObj.merge()
+            wlObj = wlObj.subtract(blObj)
+            # shouldnt need to merge again here, as we only have less ranges than before
+
+        # while we could use the get_fasta function from pyranges, it needs another
+        # dependency (pyfaidx) and is slower (from my preliminary testing)
+        # i terate over all chromosomes and each of the ranges
+        for chr, df in wlObj:
+            for region in df.iterrows():
+                seq = fastaFile.fetch(
+                    reference=chr, start=region["Start"], end=region["End"]
+                )
 
                 for i in range(len(seq) - 2):
                     diNucCounts[seq[i : i + 2]] += 1

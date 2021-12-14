@@ -133,7 +133,9 @@ def main():
     # @TODO: convert the blacklist to a whitelist bed or make blacklist work with it
     if inputs.normaliseCounts:
         diNucCounts, triNucCounts = countContexts(
-            fastaFilePath=inputs.referenceFile, bedFile=inputs.whiteListFile
+            fastaFilePath=inputs.referenceFile,
+            whiteListBed=inputs.whiteListFile,
+            blackListBed=inputs.blackListFile,
         )
     else:
         # have them empty, so we dont normalise
