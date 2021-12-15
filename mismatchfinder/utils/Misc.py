@@ -214,7 +214,95 @@ def countContexts(fastaFilePath, whiteListBed=None, blackListBed=None):
     return (diNucCounts, triNucCounts)
 
 
-def normaliseCounts(countsDf, contextCountDf):
+# these counts are used to generate a weighting for normalisation and they were generated with
+# Biostrings on the BSgenome.GRCh38
+nucleotideCountsGRCh38 = {
+    # diNucCounts
+    "AA": 287025139,
+    "AC": 148150331,
+    "AG": 205752406,
+    "AT": 226225785,
+    "CA": 212880749,
+    "CC": 151236932,
+    "CG": 29401795,
+    "CT": 205524144,
+    "GA": 175847498,
+    "GC": 124732844,
+    "GG": 152432158,
+    "GT": 148502457,
+    "TA": 191400248,
+    "TC": 174923630,
+    "TG": 213928532,
+    "TT": 289690054,
+    # triNuc
+    "AAA": 112465943,
+    "AAC": 43532050,
+    "AAG": 58439928,
+    "AAT": 72587151,
+    "ACA": 59305516,
+    "ACC": 33784390,
+    "ACG": 7584302,
+    "ACT": 47476086,
+    "AGA": 65552680,
+    "AGC": 41073623,
+    "AGG": 51723263,
+    "AGT": 47402783,
+    "ATA": 60308591,
+    "ATC": 39076747,
+    "ATG": 53548035,
+    "ATT": 73292370,
+    "CAA": 55220609,
+    "CAC": 44001434,
+    "CAG": 59791771,
+    "CAT": 53866888,
+    "CCA": 53293160,
+    "CCC": 38036593,
+    "CCG": 8026845,
+    "CCT": 51880303,
+    "CGA": 6511692,
+    "CGC": 7021552,
+    "CGG": 8229568,
+    "CGT": 7638969,
+    "CTA": 37666053,
+    "CTC": 49481013,
+    "CTG": 59039769,
+    "CTT": 59337262,
+    "GAA": 58990420,
+    "GAC": 27737004,
+    "GAG": 49560877,
+    "GAT": 39559024,
+    "GCA": 42481943,
+    "GCC": 34497599,
+    "GCG": 7078395,
+    "GCT": 40674873,
+    "GGA": 46022042,
+    "GGC": 34474720,
+    "GGG": 38148838,
+    "GGT": 33786518,
+    "GTA": 33265786,
+    "GTC": 27466578,
+    "GTG": 44578403,
+    "GTT": 43191653,
+    "TAA": 60348082,
+    "TAC": 32879810,
+    "TAG": 37959659,
+    "TAT": 60212654,
+    "TCA": 57800075,
+    "TCC": 44918305,
+    "TCG": 6712244,
+    "TCT": 65492835,
+    "TGA": 57760931,
+    "TGC": 42162935,
+    "TGG": 54330453,
+    "TGT": 59674158,
+    "TTA": 60159779,
+    "TTC": 58899235,
+    "TTG": 56762262,
+    "TTT": 113868707,
+}
+
+
+def normaliseCounts(countsDf, contextCountDf, flatNorm=True):
     debug("Normalising counts with reference context frequency")
     # go over all columns and get the corresponding counts from the contexts, then make a vector from those counts in the same order
     countsLength = len(countsDf.columns)
@@ -228,7 +316,16 @@ def normaliseCounts(countsDf, contextCountDf):
         # we also need the reverse complement of the context as we collapse the counts
         refContextRevComp = reverseComplement(refContext)
 
-        weights[i] = contextCountDf[refContext] + contextCountDf[refContextRevComp]
+        # we generate the weight, by comparing the count we had in our analysis region to the counts
+        # in the whole genome and adjust them that way (or just a flat normalisation)
+        if flatNorm:
+            baseline = nucleotideCountsGRCh38[refContext]
+            +nucleotideCountsGRCh38[refContextRevComp]
+        else:
+            baseline = 1
+        weights[i] = (
+            contextCountDf[refContext] + contextCountDf[refContextRevComp] / baseline
+        )
         debug(f"{i}: {refContext}/{refContextRevComp} -> {weights[i]}")
 
     # we create the weights, but multiply them, so that we dont come into double precision range

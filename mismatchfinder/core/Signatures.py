@@ -122,7 +122,7 @@ class Signature(object):
             # and here we just discard them
             return Signature(prelimSigs, type)
 
-    def analyseCountsFile(self, file, method="ILM", oligoCounts=None):
+    def analyseCountsFile(self, file, method="ILM", oligoCounts=None, flatNorm=True):
 
         debug(f"Reading in context counts file {file}")
         with open(file, mode="r") as countFH:
@@ -142,7 +142,7 @@ class Signature(object):
             if not oligoCounts is None:
                 # normalise the counts, by dividing each count by the occurance in the counts
                 countsTable = normaliseCounts(
-                    countsDf=countsTable, contextCountDf=oligoCounts
+                    countsDf=countsTable, contextCountDf=oligoCounts, flatNorm=flatNorm
                 )
 
         if method == "QP":

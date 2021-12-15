@@ -184,6 +184,15 @@ class InputParser(object):
         # might have with the detection as well
         parser.set_defaults(normaliseCounts=False)
 
+        parser.add_argument(
+            "--flatNormalisation",
+            help="Flag to enable an even normalisation on the number of the contexts in the genome (default is to use the fraction of found contexts vs the total number in the genome)",
+            action="store_true",
+        )
+        # we set this to false, because an issue in the germline calling can hint at a problem we
+        # might have with the detection as well
+        parser.set_defaults(flatNormalisation=False)
+
         # parser.add_argument(
         #     "-n",
         #     "--normals",
@@ -348,3 +357,5 @@ class InputParser(object):
         self.germlineRequirePass = params.germlineRequirePass
 
         self.normaliseCounts = params.normaliseCounts
+
+        self.flatNormalisation = params.flatNormalisation

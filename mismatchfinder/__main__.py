@@ -137,6 +137,7 @@ def main():
             # because we have a path type, we need to convert to string
             whiteListBed=inputs.whiteListFile,
             blackListBed=inputs.blackListFile,
+            flatNorm=inputs.flatNormalisation,
         )
     else:
         # have them empty, so we dont normalise
