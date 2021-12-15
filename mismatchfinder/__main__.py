@@ -137,7 +137,6 @@ def main():
             # because we have a path type, we need to convert to string
             whiteListBed=inputs.whiteListFile,
             blackListBed=inputs.blackListFile,
-            flatNorm=inputs.flatNormalisation,
         )
     else:
         # have them empty, so we dont normalise
@@ -161,7 +160,10 @@ def main():
     SBSsig = Signature.loadSignaturesFromFile(type="SBS")
     SBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_SBScontexts.tsv")
     SBSweights = SBSsig.analyseCountsFile(
-        SBSFile, method=inputs.method, oligoCounts=triNucCounts
+        SBSFile,
+        method=inputs.method,
+        oligoCounts=triNucCounts,
+        flatNorm=inputs.flatNormalisation,
     )
     SBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_SBSweights.tsv"
@@ -172,7 +174,10 @@ def main():
     DBSsig = Signature.loadSignaturesFromFile(type="DBS")
     DBSFile = inputs.outFileRoot.parent / (inputs.outFileRoot.name + "_DBScontexts.tsv")
     DBSweights = DBSsig.analyseCountsFile(
-        DBSFile, method=inputs.method, oligoCounts=triNucCounts
+        DBSFile,
+        method=inputs.method,
+        oligoCounts=diNucCounts,
+        flatNorm=inputs.flatNormalisation,
     )
     DBSweightsFile = inputs.outFileRoot.parent / (
         inputs.outFileRoot.name + "_DBSweights.tsv"
