@@ -311,8 +311,9 @@ def normaliseCounts(countsDf, contextCountDf, flatNorm=True):
     for i in range(countsLength):
         # get the mutation type
         col = countsDf.columns[i]
-        # snip the mutation off
-        refContext = col[:3]
+        # snip the mutation off which starts with >
+        symbIdx = col.index(">")
+        refContext = col[:symbIdx]
         # we also need the reverse complement of the context as we collapse the counts
         refContextRevComp = reverseComplement(refContext)
 
