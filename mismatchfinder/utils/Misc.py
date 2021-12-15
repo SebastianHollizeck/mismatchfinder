@@ -323,14 +323,13 @@ def normaliseCounts(countsDf, contextCountDf, flatNorm=True):
             baseline = nucleotideCountsGRCh38[refContext]
             +nucleotideCountsGRCh38[refContextRevComp]
         else:
-            baseline = 1
+            # we want the baseline to reduce the counts and this is a good average of the genome
+            baseline = 4000000
         weights[i] = (
             contextCountDf[refContext] + contextCountDf[refContextRevComp] / baseline
         )
         debug(f"{i}: {refContext}/{refContextRevComp} -> {weights[i]}")
 
-    # we create the weights, but multiply them, so that we dont come into double precision range
-    weights = divide(weights, (sum(weights) / 100))
     debug(f"Final weights: {weights}")
 
     # finally the normalisation (which is pretty easy)
