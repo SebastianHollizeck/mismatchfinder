@@ -95,6 +95,12 @@ class InputParser(object):
             default=-1,
         )
         parser.add_argument(
+            "--minFragmentLength",
+            help="minimum fragment length for a read to be considered for analysis [default: %(default)s]",
+            type=int,
+            default=0,
+        )
+        parser.add_argument(
             "--onlyOverlap",
             help="only consider the overlapping part of the paired end fragment [default: %(default)s]",
             action="store_true",
@@ -352,6 +358,8 @@ class InputParser(object):
             self.maxFragmentLength = float("inf")
         else:
             self.maxFragmentLength = params.maxFragmentLength
+
+        self.minFragmentLength = params.minFragmentLength
 
         self.afCutOff = params.germlineAFCutOff
         self.germlineRequirePass = params.germlineRequirePass

@@ -34,6 +34,7 @@ class BamScanner(Process):
         maxMisMatchesPerFragment,
         minMisMatchesPerFragment,
         maxFragLength,
+        minFragLength,
         filterSecondaries=True,
         onlyOverlap=False,
         strictOverlap=False,
@@ -65,6 +66,7 @@ class BamScanner(Process):
         self.minMisMatchesPerFragment = minMisMatchesPerFragment
 
         self.maxFragmentLength = maxFragLength
+        self.minFragmentLength = minFragLength
 
         self.filterSecondaries = filterSecondaries
 
@@ -297,7 +299,10 @@ class BamScanner(Process):
                     nNoMisMatchReads += 1
                 elif self.filterSecondaries and hasSecondaryMatches(r):
                     nSecondaryHits += 1
-                elif abs(r.template_length) > self.maxFragmentLength:
+                elif (
+                    abs(r.template_length) > self.maxFragmentLength
+                    or abs(r.template_length) < self.minFragLength
+                ):
                     nFragSize += 1
                 else:
                     scanList.append(r)
