@@ -301,7 +301,7 @@ class BamScanner(Process):
                     nSecondaryHits += 1
                 elif (
                     abs(r.template_length) > self.maxFragmentLength
-                    or abs(r.template_length) < self.minFragLength
+                    or abs(r.template_length) < self.minFragmentLength
                 ):
                     nFragSize += 1
                 else:
