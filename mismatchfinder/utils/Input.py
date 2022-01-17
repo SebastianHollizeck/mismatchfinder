@@ -162,7 +162,7 @@ class InputParser(object):
             "--method",
             help="The method to use to deconstruct signatures QP: Quadratic Programming ILM: Iterative Linear [default: %(default)s]",
             choices=["QP", "ILM"],
-            default="ILM",
+            default="QP",
         )
 
         parser.add_argument(
