@@ -1,5 +1,6 @@
 import unittest
 import pathlib
+import logging
 
 from mismatchfinder.core.Signatures import Signature
 import numpy as np
@@ -10,6 +11,10 @@ def calculateError(one, two):
 
 
 class sigDecompTest(unittest.TestCase):
+    # we disable logging for the unit test
+    def setUp(self):
+        logging.disable(logging.CRITICAL)
+
     def test_loadDefaultSBSSignature(self):
         self.assertIsInstance(Signature.loadSignaturesFromFile(type="SBS"), Signature)
 
