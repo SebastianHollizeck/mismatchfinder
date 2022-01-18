@@ -302,7 +302,7 @@ nucleotideCountsGRCh38 = {
 }
 
 
-def normaliseCounts(countsDf, contextCountDf, flatNorm=True):
+def normaliseCounts(countsDf, contextCountDf, flatNorm=False):
     debug("Normalising counts with reference context frequency")
     # go over all columns and get the corresponding counts from the contexts, then make a vector from those counts in the same order
     countsLength = len(countsDf.columns)
@@ -320,11 +320,12 @@ def normaliseCounts(countsDf, contextCountDf, flatNorm=True):
         # we generate the weight, by comparing the count we had in our analysis region to the counts
         # in the whole genome and adjust them that way (or just a flat normalisation)
         if flatNorm:
-            baseline = nucleotideCountsGRCh38[refContext]
-            +nucleotideCountsGRCh38[refContextRevComp]
-        else:
             # we want the baseline to reduce the counts and this is a good average of the genome
             baseline = 4000000
+        else:
+            baseline = nucleotideCountsGRCh38[refContext]
+            +nucleotideCountsGRCh38[refContextRevComp]
+
         weights[i] = (
             contextCountDf[refContext] + contextCountDf[refContextRevComp] / baseline
         )
