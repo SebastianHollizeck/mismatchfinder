@@ -107,41 +107,38 @@ class sigDecompTest(unittest.TestCase):
 
         # compare true weights with deconstructed weights
         error = calculateError(weights, mix)
-
         # error should be very small, but ILM really fucks this, sooooo
         self.assertTrue(error < 0.1)
 
+    def test_decompQP_complex(self):
+        sig = Signature.loadSignaturesFromFile(type="SBS")
 
-def test_decompQP_complex(self):
-    sig = Signature.loadSignaturesFromFile(type="SBS")
+        # building artificial counts
+        mix = np.zeros(67)
+        mix[0] = 0.25
+        mix[2] = 0.05
+        mix[4] = 0.46
+        mix[6] = 0.1
+        mix[23] = 0.03
+        mix[25] = 0.01
+        mix[35] = 0.08
+        mix[61] = 0.02
 
-    # building artificial counts
-    mix = np.zeros(67)
-    mix[0] = 0.25
-    mix[2] = 0.05
-    mix[4] = 0.46
-    mix[6] = 0.1
-    mix[23] = 0.03
-    mix[25] = 0.01
-    mix[35] = 0.08
-    mix[61] = 0.02
+        # get the counts how they look like
+        counts = sig.data.dot(mix) * 100000
 
-    # get the counts how they look like
-    counts = sig.data.dot(mix) * 100000
+        # QP actually wants a matrix
+        counts = counts.reshape((1, 96))
 
-    # QP actually wants a matrix
-    counts = counts.reshape((1, 96))
+        # deconstruct
+        weights = sig.whichSignaturesQP(counts)
 
-    # deconstruct
-    weights = sig.whichSignaturesQP(counts)
+        weights = weights.flatten()
+        # compare true weights with deconstructed weights
+        error = calculateError(weights, mix)
 
-    weights = weights.flatten()
-
-    # compare true weights with deconstructed weights
-    error = calculateError(weights, mix)
-
-    # error should be very small
-    self.assertTrue(error < 0.0001)
+        # error should be very small
+        self.assertTrue(error < 0.0001)
 
 
 if __name__ == "__main__":
