@@ -11,6 +11,7 @@ from numpy import array, quantile, sort, mean
 from mismatchfinder.results.Results import MismatchCandidates
 from mismatchfinder.core.EndMotives import EndMotives
 from mismatchfinder.utils.Misc import countLowerCase
+from mismatchfinder.utils.Output import outputExists
 
 # TODO: remove after profiling
 # from pyinstrument import Profiler
