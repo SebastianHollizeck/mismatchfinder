@@ -48,6 +48,7 @@ class BamScanner(Process):
         log=None,
         writeEvidenceBam=False,
         writeEvidenceReadPairs=False,
+        overwrite=False,
     ):
         super(BamScanner, self).__init__()
 
@@ -85,6 +86,7 @@ class BamScanner(Process):
         self.outFileRoot = outFileRoot
         self.writeEvidenceBam = writeEvidenceBam
         self.writeEvidenceReadPairs = writeEvidenceReadPairs
+        self.overwrite = overwrite
 
         self.endMotives = EndMotives(kmer)
 
@@ -473,47 +475,53 @@ class BamScanner(Process):
         # maybe it has to do with using "spawn" as a start method
         self.logger.setLevel(self.logLevel)
 
-        self.logger.info(f"Starting scan of {self.bamFilePath.name}")
-        # initiate bam object
-
-        # execute
-        # first get all possible sites
-        mutCands = self.getMutationSites()
-
-        # filter out germline mismatches
-        mutCands.checkGermlineStatus(
-            self.germObj,
-            afCutOff=self.afCutOff,
-            discard=True,
-            requirePass=self.germlineRequirePass,
-        )
-
-        # count each context (strand agnosticly, so if the rreverse complement is already found we
-        # instead count the reverse complement)
-        mutCands.countContexts()
-
-        if not self.outFileRoot is None:
-            # we request only one thread to write to the files at one time
-            with self.lock:
-                self.logger.info(f"Writing result counts to file")
-                mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
-                mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
-                mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
-                self.endMotives.writeFreqsToFile(self.outFileRoot, self.bamFilePath)
-
-            # dont need a lock here, as we create a new file for each bam
-            mutCands.writeSitesToFile(self.outFileRoot, self.bamFilePath)
+        # first we check if we actually need to create output
+        if not self.overwrite and outputExists(self.outFileRoot, self.bamFilePath):
+            self.logger.info(
+                f"Skipping scan of {self.bamFilePath.name} found previous results"
+            )
         else:
-            self.logger.info(f"No output file root found so no output written")
+            self.logger.info(f"Starting scan of {self.bamFilePath.name}")
+            # initiate bam object
 
-        # sadly it takes VERY long to actually put things into the result queue if the sites
-        # copied as well... the issus is the pickling. So we really need to work with this within
-        # this process
-        mutCands.mutSites = None
-        mutCands.fragmentSizeQuantiles = None
-        ## TODO: write out mutSites for "panel of normals"
-        ## TODO: fit a density function for the fragmentSizes?
-        ## TODO: maybe also "delete" the field instead of set to None
+            # execute
+            # first get all possible sites
+            mutCands = self.getMutationSites()
+
+            # filter out germline mismatches
+            mutCands.checkGermlineStatus(
+                self.germObj,
+                afCutOff=self.afCutOff,
+                discard=True,
+                requirePass=self.germlineRequirePass,
+            )
+
+            # count each context (strand agnosticly, so if the rreverse complement is already found we
+            # instead count the reverse complement)
+            mutCands.countContexts()
+
+            if not self.outFileRoot is None:
+                # we request only one thread to write to the files at one time
+                with self.lock:
+                    self.logger.info(f"Writing result counts to file")
+                    mutCands.writeSBSToFile(self.outFileRoot, self.bamFilePath)
+                    mutCands.writeDBSToFile(self.outFileRoot, self.bamFilePath)
+                    mutCands.writeStatsToFile(self.outFileRoot, self.bamFilePath)
+                    self.endMotives.writeFreqsToFile(self.outFileRoot, self.bamFilePath)
+
+                # dont need a lock here, as we create a new file for each bam
+                mutCands.writeSitesToFile(self.outFileRoot, self.bamFilePath)
+            else:
+                self.logger.info(f"No output file root found so no output written")
+
+            # sadly it takes VERY long to actually put things into the result queue if the sites
+            # copied as well... the issus is the pickling. So we really need to work with this within
+            # this process
+            mutCands.mutSites = None
+            mutCands.fragmentSizeQuantiles = None
+            ## TODO: write out mutSites for "panel of normals"
+            ## TODO: fit a density function for the fragmentSizes?
+            ## TODO: maybe also "delete" the field instead of set to None
 
         self.logger.debug("Releasing requested resource lock")
         # release the block for resources again

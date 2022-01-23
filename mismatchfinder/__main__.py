@@ -44,7 +44,7 @@ def main():
     # generate germline object
     germline = GermlineObject.parseZarrRoot(inputs.germlineFile)
 
-    createOutputFiles(inputs.outFileRoot)
+    createOutputFiles(inputs.outFileRoot, overwrite=inputs.overwrite)
 
     # create a block to analyse only the specified amount of processes in parallel
     semaphore = Semaphore(inputs.threads)
@@ -88,6 +88,7 @@ def main():
             germlineRequirePass=inputs.germlineRequirePass,
             afCutOff=inputs.afCutOff,
             outFileRoot=inputs.outFileRoot,
+            overwrite=inputs.overwrite,
             log=logger,
         )
         # we request the resources here, but return them inside the thread, once it is done

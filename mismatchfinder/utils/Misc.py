@@ -335,3 +335,12 @@ def normaliseCounts(countsDf, contextCountDf, flatNorm=False):
 
     # finally the normalisation (which is pretty easy)
     return divide(countsDf, weights)
+
+
+# calculates file line number, taken from
+# (https://stackoverflow.com/questions/845058/how-to-get-line-count-of-a-large-file-cheaply-in-python)
+def file_linenumber(fname):
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1

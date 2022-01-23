@@ -137,6 +137,12 @@ class InputParser(object):
             default=None,
         )
         parser.add_argument(
+            "--overwrite",
+            help="wether to overwrite previous results [default: %(default)s]",
+            action="store_true",
+        )
+        parser.set_defaults(overwrite=False)
+        parser.add_argument(
             "--writeEvidenceBam",
             help="wether to output the reads, which were used to calculate the mismatches as a bam [default: %(default)s]",
             action="store_true",
@@ -353,6 +359,7 @@ class InputParser(object):
 
         self.writeEvidenceBam = params.writeEvidenceBam
         self.writeEvidenceReadPairs = params.writeEvidenceAsReadPairs
+        self.overwrite = params.overwrite
 
         if params.maxFragmentLength == -1:
             self.maxFragmentLength = float("inf")

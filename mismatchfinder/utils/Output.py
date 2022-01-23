@@ -3,8 +3,9 @@ from logging import error, debug
 from sys import stderr
 
 from matplotlib.pyplot import figure, show
-from numpy import abs, max, min
-from pandas import DataFrame, concat
+from numpy import abs, max, min, isnan
+from pandas import DataFrame, concat, read_csv
+from os.path import isfile
 
 from mismatchfinder.utils.Misc import DBSorder, SBSorder
 
@@ -98,7 +99,7 @@ def scatter_hist(x, y, ax, ax_histy, range=None, label=None, bins=20):
     ax_histy.hist(y, range=range, bins=bins, orientation="horizontal", alpha=0.9)
 
 
-def createOutputFiles(outFileRoot):
+def createOutputFiles(outFileRoot, overwrite=False):
 
     debug("Creating empty output files with headers")
 
@@ -110,18 +111,22 @@ def createOutputFiles(outFileRoot):
 
     # write the header to the files with one extra column where the name will go
     try:
-        with SBSFile.open("w") as fh:
-            fh.write("bam\t" + "\t".join(SBSorder) + "\n")
+        # but only if the file doesnt exist yet, OR we overwrite
+        if overwrite or not isfile(SBSFile):
+            with SBSFile.open("w") as fh:
+                fh.write("bam\t" + "\t".join(SBSorder) + "\n")
 
-        with DBSFile.open("w") as fh:
-            fh.write("bam\t" + "\t".join(DBSorder) + "\n")
-
-        with statsFile.open("w") as fh:
-            # we just want to create the file here
-            pass
-        with endMotsFile.open("w") as fh:
-            # we just want to create the file here
-            pass
+        if overwrite or not isfile(DBSFile):
+            with DBSFile.open("w") as fh:
+                fh.write("bam\t" + "\t".join(DBSorder) + "\n")
+        if overwrite or not isfile(statsFile):
+            with statsFile.open("w") as fh:
+                # we just want to create the file here
+                pass
+        if overwrite or not isfile(endMotsFile):
+            with endMotsFile.open("w") as fh:
+                # we just want to create the file here
+                pass
     except:
         error(f"Could not write into folder{outFileRoot.parent}")
         exit(1)
@@ -132,3 +137,38 @@ def writeStatsFile(pandas, outFileRoot):
     statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
     with statsFile.open("w") as fh:
         pandas.to_csv(fh, sep="\t", index=False)
+
+
+def outputExists(outFileRoot, bamFilePath):
+    # sites file is the last thing to be generated for a sample, so if that exists, we
+    # are most likely good, but we could still check how many sites were reported in
+    # the stats file and see if all of them were spilled
+    sitesFile = outFileRoot.parent / (
+        f"{outFileRoot.name}_{bamFilePath.name}_sites.tsv"
+    )
+    if not isfile(sitesFile):
+        return False
+
+    # in this case we do the sanity check with number of sites
+    with open(statsFile, "r") as statsFH:
+        stats = read_csv(statsFH, header=0, sep="\t", index_col=0)
+
+    # we need to both check germline and somatic numbers, as we might not have both
+    # (no somatic) if no germline resource was set
+    siteNumbers = stats.loc[bamFilePath.name, ["nSites", "nSomaticMisMatchSites"]]
+
+    # count the number of lines from the sites file
+    statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
+    nReportedSites = file_linenumber(sitesFile)
+
+    # compare what we actually should have
+    if not isnan(siteNumbers[1]):
+        if nReportedSites != siteNumbers[1]:
+            return False
+        else:
+            return True
+    else:
+        if nReportedSites != siteNumbers[0]:
+            return False
+        else:
+            return True
