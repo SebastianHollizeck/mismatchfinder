@@ -146,10 +146,12 @@ def outputExists(outFileRoot, bamFilePath):
     sitesFile = outFileRoot.parent / (
         f"{outFileRoot.name}_{bamFilePath.name}_sites.tsv"
     )
+
     if not isfile(sitesFile):
         return False
 
     # in this case we do the sanity check with number of sites
+    statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
     with open(statsFile, "r") as statsFH:
         stats = read_csv(statsFH, header=0, sep="\t", index_col=0)
 
@@ -158,7 +160,6 @@ def outputExists(outFileRoot, bamFilePath):
     siteNumbers = stats.loc[bamFilePath.name, ["nSites", "nSomaticMisMatchSites"]]
 
     # count the number of lines from the sites file
-    statsFile = outFileRoot.parent / (outFileRoot.name + "_stats.tsv")
     nReportedSites = file_linenumber(sitesFile)
 
     # compare what we actually should have
