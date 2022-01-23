@@ -7,7 +7,7 @@ from numpy import abs, max, min, isnan
 from pandas import DataFrame, concat, read_csv
 from os.path import isfile
 
-from mismatchfinder.utils.Misc import DBSorder, SBSorder
+from mismatchfinder.utils.Misc import DBSorder, SBSorder, file_linenumber
 
 
 class JSONWriter:
