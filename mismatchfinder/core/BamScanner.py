@@ -523,11 +523,11 @@ class BamScanner(Process):
             ## TODO: write out mutSites for "panel of normals"
             ## TODO: fit a density function for the fragmentSizes?
             ## TODO: maybe also "delete" the field instead of set to None
+            self.logger.info(f"Finished scan of {self.bamFilePath.name}")
 
         self.logger.debug("Releasing requested resource lock")
         # release the block for resources again
         self.semaphore.release()
-        self.logger.info(f"Finished scan of {self.bamFilePath.name}")
 
         # explicitly destroy the semaphore and lock
         del self.semaphore
