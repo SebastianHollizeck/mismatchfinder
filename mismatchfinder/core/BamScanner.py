@@ -374,8 +374,14 @@ class BamScanner(Process):
         # wrong (or the bam is truncated in some test case)
         if len(readCache) != 0:
             self.logger.error(
-                f"Found reads left over in the cache after the main loop, this is a bug {readCache}"
+                f"Found reads left over in the cache after the main loop, this is a bug or shows a problem with orphaned reads in the input\nListing read names:"
             )
+            counter = 0
+            for read in readCache:
+                self.logger.error(read.query_name)
+                counter += 1
+                if counter == 10:
+                    self.logger.error(f"and {len(readCache)-10} more")
 
         # we are done so we update the status as well
         self.logger.info(
