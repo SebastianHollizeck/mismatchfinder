@@ -89,16 +89,16 @@ class InputParser(object):
             default=1,
         )
         parser.add_argument(
-            "--maxFragmentLength",
-            help="maximum fragment length for a read to be considered for analysis [default: %(default)s] -1 corresponds to unlimited",
-            type=int,
-            default=-1,
+            "--maxFragmentLengths",
+            help="comma seperated list of maximum fragment lengths for a read to be considered for analysis [default: %(default)s] -1 corresponds to unlimited; will be checked with --minFragmentLengths for proper non overlapping intervals",
+            type=str,
+            default="144,325",
         )
         parser.add_argument(
-            "--minFragmentLength",
-            help="minimum fragment length for a read to be considered for analysis [default: %(default)s]",
-            type=int,
-            default=0,
+            "--minFragmentLengths",
+            help="comma seperated list of minimum fragment lengths for a read to be considered for analysis [default: %(default)s]; will be checked with --maxFragmentLengths for proper non overlapping intervals",
+            type=str,
+            default="74,240",
         )
         parser.add_argument(
             "--onlyOverlap",
@@ -361,12 +361,34 @@ class InputParser(object):
         self.writeEvidenceReadPairs = params.writeEvidenceAsReadPairs
         self.overwrite = params.overwrite
 
-        if params.maxFragmentLength == -1:
-            self.maxFragmentLength = float("inf")
-        else:
-            self.maxFragmentLength = params.maxFragmentLength
+        # here we check and parse the fragment length intervals
+        minFragList = params.minFragLengths.split(",")
+        maxFragList = params.maxFragLengths.split(",")
 
-        self.minFragmentLength = params.minFragmentLength
+        if len(minFragList) != len(maxFragList):
+            error(
+                "Length of minimum and maximum fragment sizes does not match\n--minFragmentLengths and --maxFragmentLengths need to have the same length"
+            )
+            exit(1)
+
+        self.fragmentLengthIntervals = []
+        for min, max in zip(minFragList, maxFragList):
+            try:
+                minNum = int(min)
+                maxNum = int(max)
+
+                if maxNum == -1:
+                    maxNum = float("inf")
+
+                if minNum < 0 or minNum >= maxNum:
+                    raise Exception("why you do the stupid?")
+
+                self.fragmentIntervals.append((min, max))
+
+            except Exception as e:
+                error(
+                    f"Specified fragment size interval is no proper size min:{min} max:{max}"
+                )
 
         self.afCutOff = params.germlineAFCutOff
         self.germlineRequirePass = params.germlineRequirePass

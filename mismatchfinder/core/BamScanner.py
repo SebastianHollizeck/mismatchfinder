@@ -34,8 +34,7 @@ class BamScanner(Process):
         minMisMatchesPerRead,
         maxMisMatchesPerFragment,
         minMisMatchesPerFragment,
-        maxFragLength,
-        minFragLength,
+        fragmentLengthIntervals,
         filterSecondaries=True,
         onlyOverlap=False,
         strictOverlap=False,
@@ -67,8 +66,7 @@ class BamScanner(Process):
         self.maxMisMatchesPerFragment = maxMisMatchesPerFragment
         self.minMisMatchesPerFragment = minMisMatchesPerFragment
 
-        self.maxFragmentLength = maxFragLength
-        self.minFragmentLength = minFragLength
+        self.fragmentLengthIntervals = fragmentLengthIntervals
 
         self.filterSecondaries = filterSecondaries
 
@@ -302,10 +300,7 @@ class BamScanner(Process):
                     nNoMisMatchReads += 1
                 elif self.filterSecondaries and hasSecondaryMatches(r):
                     nSecondaryHits += 1
-                elif (
-                    abs(r.template_length) > self.maxFragmentLength
-                    or abs(r.template_length) < self.minFragmentLength
-                ):
+                elif not readInFragmentLength(r, self.fragmentLengthIntervals):
                     nFragSize += 1
                 else:
                     scanList.append(r)
@@ -891,3 +886,14 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
     read2New.query_qualities = read2Quals
 
     return (read1New, read2New, fLen)
+
+
+def readInFragmentLength(read, fragmentLengthIntervals):
+    # check all the fragmentlength intervals we have if this fits
+    fragSize = abs(read.template_length)
+    for min, max in fragmentLengthIntervals:
+        if fragSize >= min or fragSize <= max:
+            return True
+
+    # we return fals if none of them worked
+    return False
