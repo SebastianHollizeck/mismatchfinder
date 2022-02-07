@@ -73,7 +73,7 @@ def main():
             minMisMatchesPerRead=inputs.minMisMatchesPerRead,
             maxMisMatchesPerFragment=inputs.maxMisMatchesPerFragment,
             minMisMatchesPerFragment=inputs.minMisMatchesPerFragment,
-            fragLengthIntervals=inputs.fragmentLengthIntervals,
+            fragmentLengthIntervals=inputs.fragmentLengthIntervals,
             onlyOverlap=inputs.onlyOverlap,
             strictOverlap=inputs.strictOverlap,
             writeEvidenceBam=inputs.writeEvidenceBam,
