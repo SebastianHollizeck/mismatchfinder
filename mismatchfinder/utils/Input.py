@@ -362,8 +362,8 @@ class InputParser(object):
         self.overwrite = params.overwrite
 
         # here we check and parse the fragment length intervals
-        minFragList = params.minFragLengths.split(",")
-        maxFragList = params.maxFragLengths.split(",")
+        minFragList = params.minFragmentLengths.split(",")
+        maxFragList = params.maxFragmentLengths.split(",")
 
         if len(minFragList) != len(maxFragList):
             error(
