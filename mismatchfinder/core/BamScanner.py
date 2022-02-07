@@ -373,7 +373,7 @@ class BamScanner(Process):
             )
             counter = 0
             for read in readCache:
-                self.logger.error(read.query_name)
+                self.logger.error(read)
                 counter += 1
                 if counter == 10:
                     self.logger.error(f"and {len(readCache)-10} more")
