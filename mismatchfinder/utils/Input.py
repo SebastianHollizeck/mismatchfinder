@@ -383,11 +383,11 @@ class InputParser(object):
                 if minNum < 0 or minNum >= maxNum:
                     raise Exception("why you do the stupid?")
 
-                self.fragmentIntervals.append((min, max))
+                self.fragmentIntervals.append((minNum, maxNum))
 
             except Exception as e:
                 error(
-                    f"Specified fragment size interval is no proper size min:{min} max:{max}"
+                    f"Specified fragment size interval is no proper size min:{min} max:{max} ({type(e)})"
                 )
 
         self.afCutOff = params.germlineAFCutOff
