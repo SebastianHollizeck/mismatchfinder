@@ -893,7 +893,7 @@ def readInFragmentLength(read, fragmentLengthIntervals):
     # check all the fragmentlength intervals we have if this fits
     fragSize = abs(read.template_length)
     for min, max in fragmentLengthIntervals:
-        if fragSize >= min or fragSize <= max:
+        if fragSize >= min and fragSize <= max:
             return True
 
     # we return fals if none of them worked
