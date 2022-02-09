@@ -377,6 +377,7 @@ class BamScanner(Process):
                 counter += 1
                 if counter == 10:
                     self.logger.error(f"and {len(readCache)-10} more")
+                    break
 
         # we are done so we update the status as well
         self.logger.info(
