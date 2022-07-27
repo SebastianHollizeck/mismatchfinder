@@ -1,8 +1,14 @@
 from collections import defaultdict
 from itertools import product
 from pandas import DataFrame
-import pkg_resources
+
 from mismatchfinder import ext
+try:
+    import importlib.resources as pkg_resources
+except ImportError:
+    debug("falling back to backported importlib module")
+    import importlib_resources as pkg_resources
+
 
 from mismatchfinder.utils.Misc import reverseComplement, countLowerCase
 

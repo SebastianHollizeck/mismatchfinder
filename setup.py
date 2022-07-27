@@ -40,5 +40,5 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     entry_points={"console_scripts": ["mismatchfinder=mismatchfinder.__main__:main"]},
-    package_data={"mismatchfinder": ["ext/*.csv"]},
+    package_data={"mismatchfinder": ["ext/*.csv", "ext/4merWeights.tsv"]},
 )
