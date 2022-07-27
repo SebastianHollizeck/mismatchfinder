@@ -48,7 +48,9 @@ class EndMotives(object):
     def readEndWeights(cls, endWeightsFile, kmer):
 
         if endWeightsFile is None:
-            endWeightsFile= pkg_resources.path(ext, "4merWeights.tsv") 
+            debug("Using default 4merWeights.tsv as input")
+            with pkg_resources.path(ext, "4merWeights.tsv") as path:
+                endWeightsFile = path 
 
         weightDict = defaultdict(lambda:1)
 
