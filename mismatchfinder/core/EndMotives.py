@@ -50,7 +50,7 @@ class EndMotives(object):
         if endWeightsFile is None:
             endWeightsFile= pkg_resources.path(ext, "4merWeights.tsv") 
 
-        weightDict = defaultdict(1)
+        weightDict = defaultdict(lambda:1)
 
         with open(endWeightsFile, "r") as weightsFH:
             for line in weightsFH:
