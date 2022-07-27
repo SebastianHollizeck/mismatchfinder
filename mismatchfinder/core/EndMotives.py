@@ -56,7 +56,7 @@ class EndMotives(object):
 
         with open(endWeightsFile, "r") as weightsFH:
             for line in weightsFH:
-                lineArray = line.strip().split()
+                lineArray = line.strip().split("\t")
                 # check length of kmer is what we got as input
                 nucSeq = line[0]
                 debug(f"Found weight {line[0]} for {nucSeq}")
