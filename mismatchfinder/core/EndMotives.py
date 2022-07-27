@@ -1,5 +1,8 @@
+from collections import defaultdict
 from itertools import product
 from pandas import DataFrame
+import pkg_resources
+from mismatchfinder import ext
 
 from mismatchfinder.utils.Misc import reverseComplement, countLowerCase
 
@@ -7,7 +10,8 @@ from logging import debug
 
 
 class EndMotives(object):
-    def __init__(self, kmer=4):
+
+    def __init__(self, kmer=4, endWeights=None):
 
         super(EndMotives, self).__init__()
 
@@ -15,6 +19,8 @@ class EndMotives(object):
         self.counts = EndMotives.createEndMotivesDict(kmer)
         self.n = 0
         self.freqs = None
+
+        self.weights = EndMotives.readEndWeights(endWeights, kmer)
 
     def count(self, read):
 
@@ -27,6 +33,37 @@ class EndMotives(object):
             self.counts["unknown"] = self.counts["unknown"] + 1
 
         self.n = self.n + 1
+
+        return(endSeq)
+
+    @classmethod    
+    def readEndWeights(endWeightsFile, kmer):
+
+        if endWeightsFile is None:
+            endWeightsFile= pkg_resources.path(ext, "4merWeights.tsv") 
+
+        weightDict = defaultdict(1)
+
+        with open(endWeightsFile, "r") as weightsFH:
+            for line in weightsFH:
+                lineArray = line.strip().split()
+                # check length of kmer is what we got as input
+                nucSeq = line[0]
+                if len(nucSeq) != kmer:
+                    raise "Supplied weights are not compatible with the supplied kmer length"
+                else:
+                    weightDict[nucSeq] = float(line[1])
+
+        return(weightDict)
+
+
+
+
+    def getkmerWeight(self, kmer):
+        return(self.weights[kmer])
+
+
+
 
     @classmethod
     def createEndMotivesDict(cls, kmer=4):

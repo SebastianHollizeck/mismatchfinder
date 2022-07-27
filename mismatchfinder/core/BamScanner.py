@@ -276,6 +276,8 @@ class BamScanner(Process):
             # prefilter the reads in case we only want to analyse the reads if BOTH reads pass
             # all filters
             scanList = []
+            #how sure are we this is a tumour fragment
+            fragWeight = 1
             for r in reads:
 
                 # even if the fragment doesnt have any mismatches it is important to
@@ -294,7 +296,7 @@ class BamScanner(Process):
                 nAlignedReads += 1
 
                 # we also care about the endmotives of the reads, so we store those
-                self.endMotives.count(r)
+                endSeq = self.endMotives.count(r)
 
                 if not hasNMisMatches(r, self.MDstrPattern):
                     nNoMisMatchReads += 1
@@ -303,6 +305,8 @@ class BamScanner(Process):
                 elif not readInFragmentLength(r, self.fragmentLengthIntervals):
                     nFragSize += 1
                 else:
+                    #update the weight of the fragment
+                    fragWeight *= self.endMotives.getkmerWeight(endSeq)
                     scanList.append(r)
 
             # if we only want to look at the overlap and want to be strict about it, we stop if
@@ -775,7 +779,7 @@ def makeConsensusRead(read1, read2, onlyOverlap=False, strict=False):
         # if there is no intersection, we just return the reads unchanged (this shouldnt happen,
         # because we checked the template length before, but sure)
         if onlyOverlap:
-            return (None, None, none)
+            return (None, None, None)
         return (read1, read2, abs(read1.template_length))
 
     # go through all of the overlaps and decide which of the reads is better
