@@ -58,13 +58,13 @@ class EndMotives(object):
             for line in weightsFH:
                 lineArray = line.strip().split("\t")
                 # check length of kmer is what we got as input
-                nucSeq = line[0]
-                debug(f"Found weight {line[0]} for {nucSeq}")
+                nucSeq = lineArray[0]
+                debug(f"Found weight {lineArray[0]} for {nucSeq}")
                 if len(nucSeq) != kmer:
                     
                     raise Exception("Supplied weights are not compatible with the supplied kmer length ({kmer})")
                 else:
-                    weightDict[nucSeq] = float(line[1])
+                    weightDict[nucSeq] = float(lineArray[1])
 
         return(weightDict)
 
