@@ -1,3 +1,5 @@
+from logging import debug, error
+
 from collections import defaultdict
 from itertools import product
 from pandas import DataFrame
