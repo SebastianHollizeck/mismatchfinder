@@ -60,7 +60,7 @@ class EndMotives(object):
                 # check length of kmer is what we got as input
                 nucSeq = line[0]
                 if len(nucSeq) != kmer:
-                    raise "Supplied weights are not compatible with the supplied kmer length"
+                    raise Exception("Supplied weights are not compatible with the supplied kmer length")
                 else:
                     weightDict[nucSeq] = float(line[1])
 
