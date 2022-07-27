@@ -59,7 +59,7 @@ class EndMotives(object):
                 lineArray = line.strip().split()
                 # check length of kmer is what we got as input
                 nucSeq = line[0]
-                debug("Found weight {line[0]} for {nucSeq}")
+                debug(f"Found weight {line[0]} for {nucSeq}")
                 if len(nucSeq) != kmer:
                     
                     raise Exception("Supplied weights are not compatible with the supplied kmer length ({kmer})")
