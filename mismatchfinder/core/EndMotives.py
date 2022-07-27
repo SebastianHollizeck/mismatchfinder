@@ -37,7 +37,7 @@ class EndMotives(object):
         return(endSeq)
 
     @classmethod    
-    def readEndWeights(endWeightsFile, kmer):
+    def readEndWeights(cls, endWeightsFile, kmer):
 
         if endWeightsFile is None:
             endWeightsFile= pkg_resources.path(ext, "4merWeights.tsv") 
@@ -58,7 +58,7 @@ class EndMotives(object):
 
 
 
-
+    #this is a getter (even though python doesnt really need it)
     def getkmerWeight(self, kmer):
         return(self.weights[kmer])
 
