@@ -355,9 +355,9 @@ class BamScanner(Process):
                 # store the mismatches and keep a record how often each was found
                 for mm in tmpMisMatches:
                     if mm in mutSites:
-                        mutSites[mm] += 1
+                        mutSites[mm] += fragWeight
                     else:
-                        mutSites[mm] = 1
+                        mutSites[mm] = fragWeight
                     # we also store the amount of mismatches found, so we can calculate
                     # the mismatches per read which should be stable between samples
                     nMisMatches += 1
